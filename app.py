@@ -64,6 +64,19 @@ def create_app():
     # 设置最大上传文件大小
     app.config['MAX_CONTENT_LENGTH'] = Config.MAX_UPLOAD_SIZE
 
+    # 添加静态文件路由，用于访问生成的图片
+    from flask import send_from_directory
+
+    @app.route('/generated/<path:filename>')
+    def serve_generated_file(filename):
+        """提供生成的文件访问"""
+        return send_from_directory(Config.GENERATED_FOLDER, filename)
+
+    @app.route('/uploads/<path:filename>')
+    def serve_upload_file(filename):
+        """提供上传的文件访问"""
+        return send_from_directory(Config.UPLOAD_FOLDER, filename)
+
     logger.info("Flask应用初始化完成")
     return app
 

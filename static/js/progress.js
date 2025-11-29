@@ -30,14 +30,24 @@ function displayStyles(styles) {
         return;
     }
 
-    grid.innerHTML = styles.map(style => `
-        <div class="card" onclick="selectStyle(${style.template_index})">
-            <img src="${style.image_path}" alt="样式 ${style.template_index + 1}" style="width: 100%; height: auto;">
-            <div class="mt-sm text-center">
-                <button class="btn btn-sm">选择此样式</button>
+    grid.innerHTML = styles.map(style => {
+        // 转换文件路径为URL路径
+        const imageUrl = convertPathToUrl(style.image_path);
+        return `
+            <div class="card" onclick="selectStyle(${style.template_index})">
+                <img src="${imageUrl}" alt="样式 ${style.template_index + 1}" style="width: 100%; height: auto;">
+                <div class="mt-sm text-center">
+                    <button class="btn btn-sm">选择此样式</button>
+                </div>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
+}
+
+// 转换文件系统路径为URL路径
+function convertPathToUrl(filePath) {
+    // 移除开头的 ./ 并确保使用正斜杠
+    return '/' + filePath.replace(/^\.\//, '').replace(/\\/g, '/');
 }
 
 // 生成样式模板
@@ -178,28 +188,32 @@ function displayPages(pages) {
         return;
     }
 
-    grid.innerHTML = pages.map(page => `
-        <div class="card">
-            <div class="mb-sm text-muted text-sm">第 ${page.page_number} 页</div>
-            ${page.image_path ?
-                `<img src="${page.image_path}" alt="第 ${page.page_number} 页" style="width: 100%; height: auto;">` :
-                `<div style="width: 100%; height: 200px; background: var(--color-gray-50); display: flex; align-items: center; justify-content: center;">
-                    <span class="text-muted">${getPageStatusText(page.status)}</span>
-                </div>`
-            }
-            ${page.status === 'completed' ?
-                `<div class="mt-sm">
-                    <button class="btn btn-sm" onclick="regeneratePage(${page.page_number})">重新生成</button>
-                </div>` : ''
-            }
-            ${page.status === 'failed' ?
-                `<div class="mt-sm">
-                    <p class="text-muted text-sm">错误: ${page.error_message}</p>
-                    <button class="btn btn-sm" onclick="regeneratePage(${page.page_number})">重试</button>
-                </div>` : ''
-            }
-        </div>
-    `).join('');
+    grid.innerHTML = pages.map(page => {
+        // 转换文件路径为URL路径
+        const imageUrl = page.image_path ? convertPathToUrl(page.image_path) : null;
+        return `
+            <div class="card">
+                <div class="mb-sm text-muted text-sm">第 ${page.page_number} 页</div>
+                ${imageUrl ?
+                    `<img src="${imageUrl}" alt="第 ${page.page_number} 页" style="width: 100%; height: auto;">` :
+                    `<div style="width: 100%; height: 200px; background: var(--color-gray-50); display: flex; align-items: center; justify-content: center;">
+                        <span class="text-muted">${getPageStatusText(page.status)}</span>
+                    </div>`
+                }
+                ${page.status === 'completed' ?
+                    `<div class="mt-sm">
+                        <button class="btn btn-sm" onclick="regeneratePage(${page.page_number})">重新生成</button>
+                    </div>` : ''
+                }
+                ${page.status === 'failed' ?
+                    `<div class="mt-sm">
+                        <p class="text-muted text-sm">错误: ${page.error_message}</p>
+                        <button class="btn btn-sm" onclick="regeneratePage(${page.page_number})">重试</button>
+                    </div>` : ''
+                }
+            </div>
+        `;
+    }).join('');
 
     // 检查是否全部完成
     const allCompleted = pages.every(p => p.status === 'completed');
