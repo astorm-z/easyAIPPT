@@ -47,6 +47,20 @@ def create_app():
     ppt_generator = PPTGenerator(Config, db_manager, banana_service)
     logger.info("服务层初始化完成")
 
+    # 恢复未完成的生成任务
+    logger.info("检查是否有未完成的生成任务...")
+    try:
+        # 查找所有状态为generating的项目
+        all_workspaces = db_manager.get_all_workspaces()
+        for workspace in all_workspaces:
+            projects = db_manager.get_ppt_projects(workspace['id'])
+            for project in projects:
+                if project['status'] == 'generating':
+                    logger.info(f"发现未完成的项目: {project['id']} - {project['title']}")
+                    ppt_generator.resume_generation(project['id'])
+    except Exception as e:
+        logger.error(f"恢复生成任务失败: {str(e)}")
+
     # 注册路由蓝图
     workspace_bp = init_workspace_routes(db_manager)
     app.register_blueprint(workspace_bp)

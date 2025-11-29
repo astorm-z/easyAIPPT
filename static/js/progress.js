@@ -173,6 +173,16 @@ async function loadPages(projectId) {
     try {
         const pages = await apiRequest(`/api/ppt/${projectId}/pages`);
         displayPages(pages);
+
+        // 检查是否有未完成的页面
+        const hasIncomplete = pages.some(p => p.status === 'pending' || p.status === 'failed');
+        const hasCompleted = pages.some(p => p.status === 'completed');
+
+        // 如果有已完成的页面但还有未完成的，显示"继续生成"按钮
+        if (hasIncomplete && hasCompleted) {
+            document.getElementById('resume-btn').style.display = 'inline-block';
+            document.getElementById('generate-btn').style.display = 'none';
+        }
     } catch (error) {
         console.error('加载PPT页面失败:', error);
     }
@@ -307,6 +317,26 @@ async function regeneratePage(pageNumber) {
         await loadPages(projectId);
     } catch (error) {
         showError('重新生成失败: ' + error.message);
+    }
+}
+
+// 恢复生成
+async function resumeGeneration() {
+    if (!confirm('继续生成未完成的PPT页面？')) return;
+
+    try {
+        await apiRequest(`/api/ppt/${projectId}/pages/resume`, {
+            method: 'POST'
+        });
+
+        // 显示进度区域
+        document.getElementById('progress-section').classList.remove('hidden');
+        document.getElementById('resume-btn').style.display = 'none';
+
+        // 开始监听进度
+        listenProgress();
+    } catch (error) {
+        showError('恢复生成失败: ' + error.message);
     }
 }
 

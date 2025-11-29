@@ -80,10 +80,40 @@ class PPTGenerator:
 
     def start_generation(self, project_id):
         """启动PPT页面生成（异步）"""
+        logger.info(f"启动PPT页面生成任务: project_id={project_id}")
         # 在新线程中执行生成任务
         thread = threading.Thread(target=self._generate_pages, args=(project_id,))
         thread.daemon = True
         thread.start()
+
+    def resume_generation(self, project_id):
+        """恢复未完成的生成任务"""
+        logger.info(f"尝试恢复生成任务: project_id={project_id}")
+
+        # 检查项目状态
+        project = self.db_manager.get_ppt_project(project_id)
+        if not project:
+            logger.warning(f"项目不存在: project_id={project_id}")
+            return False
+
+        # 只恢复状态为generating的项目
+        if project['status'] != 'generating':
+            logger.info(f"项目状态不是generating，无需恢复: status={project['status']}")
+            return False
+
+        # 检查是否有未完成的页面
+        pages = self.db_manager.get_ppt_pages(project_id)
+        incomplete_pages = [p for p in pages if p['status'] in ['pending', 'failed']]
+
+        if not incomplete_pages:
+            logger.info(f"所有页面已完成，更新项目状态")
+            self.db_manager.update_ppt_project_status(project_id, 'completed')
+            return False
+
+        logger.info(f"发现 {len(incomplete_pages)} 个未完成页面，恢复生成任务")
+        # 启动生成任务
+        self.start_generation(project_id)
+        return True
 
     def _generate_pages(self, project_id):
         """生成所有PPT页面"""
@@ -116,27 +146,42 @@ class PPTGenerator:
             )
             os.makedirs(output_dir, exist_ok=True)
 
-            # 删除旧的页面记录
-            self.db_manager.delete_ppt_pages(project_id)
-
-            # 初始化页面记录
-            for page in outline_pages:
-                self.db_manager.add_ppt_page(project_id, page['page_number'])
+            # 检查是否已有页面记录（恢复场景）
+            existing_pages = self.db_manager.get_ppt_pages(project_id)
+            if not existing_pages:
+                logger.info("首次生成，初始化页面记录")
+                # 删除旧的页面记录
+                self.db_manager.delete_ppt_pages(project_id)
+                # 初始化页面记录
+                for page in outline_pages:
+                    self.db_manager.add_ppt_page(project_id, page['page_number'])
+                existing_pages = self.db_manager.get_ppt_pages(project_id)
+            else:
+                logger.info(f"恢复生成，已有 {len(existing_pages)} 条页面记录")
 
             # 更新项目状态
             self.db_manager.update_ppt_project_status(project_id, 'generating')
 
             # 初始化生成状态
+            completed_count = len([p for p in existing_pages if p['status'] == 'completed'])
             self.generation_status[project_id] = {
-                'current_page': 0,
+                'current_page': completed_count,
                 'total_pages': len(outline_pages),
                 'status': 'generating',
                 'error': None
             }
+            logger.info(f"生成状态初始化: 已完成 {completed_count}/{len(outline_pages)} 页")
 
             # 逐页生成
             for page in outline_pages:
+                # 检查该页是否已完成
+                existing_page = next((p for p in existing_pages if p['page_number'] == page['page_number']), None)
+                if existing_page and existing_page['status'] == 'completed':
+                    logger.info(f"第 {page['page_number']} 页已完成，跳过")
+                    continue
+
                 try:
+                    logger.info(f"开始生成第 {page['page_number']}/{len(outline_pages)} 页")
                     self.generation_status[project_id]['current_page'] = page['page_number']
 
                     output_path = os.path.join(output_dir, f'page_{page["page_number"]:03d}.png')
@@ -157,6 +202,7 @@ class PPTGenerator:
                         output_path,
                         'completed'
                     )
+                    logger.info(f"第 {page['page_number']} 页生成完成")
 
                 except Exception as e:
                     # 记录错误

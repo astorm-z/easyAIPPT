@@ -162,16 +162,46 @@ def init_routes(db_manager: DBManager, banana_service: BananaService, ppt_genera
     @ppt_bp.route('/api/ppt/<int:project_id>/pages/generate', methods=['POST'])
     def generate_pages(project_id):
         """开始生成所有页面"""
+        import logging
+        logger = logging.getLogger(__name__)
+
         try:
+            logger.info(f"收到生成页面请求: project_id={project_id}")
             project = db_manager.get_ppt_project(project_id)
             if not project:
                 return jsonify({'success': False, 'error': 'PPT项目不存在'}), 404
+
+            # 检查是否需要恢复
+            if project['status'] == 'generating':
+                logger.info("项目正在生成中，尝试恢复")
+                resumed = ppt_generator.resume_generation(project_id)
+                if resumed:
+                    return jsonify({'success': True, 'message': '已恢复生成任务'})
 
             # 启动生成任务（异步）
             ppt_generator.start_generation(project_id)
 
             return jsonify({'success': True})
         except Exception as e:
+            logger.error(f"启动生成失败: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @ppt_bp.route('/api/ppt/<int:project_id>/pages/resume', methods=['POST'])
+    def resume_pages(project_id):
+        """恢复未完成的生成任务"""
+        import logging
+        logger = logging.getLogger(__name__)
+
+        try:
+            logger.info(f"收到恢复生成请求: project_id={project_id}")
+            resumed = ppt_generator.resume_generation(project_id)
+
+            if resumed:
+                return jsonify({'success': True, 'message': '已恢复生成任务'})
+            else:
+                return jsonify({'success': False, 'message': '无需恢复或任务已完成'})
+        except Exception as e:
+            logger.error(f"恢复生成失败: {str(e)}")
             return jsonify({'success': False, 'error': str(e)}), 500
 
     @ppt_bp.route('/api/ppt/<int:project_id>/pages/status')
