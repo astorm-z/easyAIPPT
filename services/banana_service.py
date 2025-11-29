@@ -138,10 +138,71 @@ class BananaService:
         return self.generate_image(full_prompt, output_path)
 
     def generate_ppt_page(self, page_content, style_reference, output_path):
-        """生成PPT页面"""
+        """生成PPT页面（基于样式模板）"""
+        logger.info(f"生成PPT页面，样式参考: {style_reference}")
+
+        # 加载提示词模板
         prompt_template = self.load_prompt('page_generation.txt')
         full_prompt = prompt_template.format(
             page_content=page_content,
-            style_reference=style_reference
+            style_reference="参考提供的样式模板图片" if style_reference else "无样式参考"
         )
-        return self.generate_image(full_prompt, output_path)
+
+        # 如果有样式模板，将其作为参考图片传入
+        if style_reference and os.path.exists(style_reference):
+            logger.info(f"使用样式模板图片: {style_reference}")
+            return self.generate_image_with_reference(full_prompt, style_reference, output_path)
+        else:
+            logger.warning("没有样式模板参考，直接生成")
+            return self.generate_image(full_prompt, output_path)
+
+    def generate_image_with_reference(self, prompt, reference_image_path, output_path, aspect_ratio="16:9", image_size="2K"):
+        """使用参考图片生成新图片（图片编辑功能）"""
+        logger.info(f"开始生成图片（带参考图片）: {output_path}")
+        logger.debug(f"提示词: {prompt[:100]}...")
+        logger.info(f"参考图片: {reference_image_path}")
+        logger.info(f"图片配置: 比例={aspect_ratio}, 尺寸={image_size}")
+
+        def api_call():
+            try:
+                logger.info(f"调用Gemini {self.model_name} 生成图片（带参考）")
+
+                # 加载参考图片
+                reference_image = Image.open(reference_image_path)
+                logger.info(f"参考图片已加载: {reference_image.size}")
+
+                # 使用Gemini API调用图片生成（文字+图片转图片）
+                response = self.client.models.generate_content(
+                    model=self.model_name,
+                    contents=[prompt, reference_image],  # 同时传入文字和图片
+                    config=types.GenerateContentConfig(
+                        response_modalities=['IMAGE'],
+                        image_config=types.ImageConfig(
+                            aspect_ratio=aspect_ratio,
+                            image_size=image_size
+                        ),
+                    )
+                )
+                logger.info("Gemini API调用成功")
+
+                # 提取并保存图片
+                for part in response.parts:
+                    if part.inline_data is not None:
+                        logger.info("从响应中提取图片数据")
+                        image = part.as_image()
+                        image.save(output_path)
+                        logger.info(f"图片已保存: {output_path}")
+                        return output_path
+
+                # 如果没有图片，创建占位图片
+                logger.warning("Gemini未返回图片，创建占位图片")
+                self._create_placeholder_image(output_path, prompt)
+                return output_path
+
+            except Exception as e:
+                logger.error(f"Gemini图片生成失败: {str(e)}")
+                logger.info("创建占位图片")
+                self._create_placeholder_image(output_path, prompt)
+                return output_path
+
+        return self.retry_api_call(api_call)
