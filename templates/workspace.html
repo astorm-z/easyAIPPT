@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}工作空间详情 - EasyAIPPT{% endblock %}
+
+{% block nav_links %}
+<a href="/" class="nav-link">返回首页</a>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="mb-xl">
+        <h1 id="workspace-title">工作空间</h1>
+        <p id="workspace-desc" class="text-muted"></p>
+    </div>
+
+    <div class="grid grid-2">
+        <!-- 左侧：知识库 -->
+        <div>
+            <div class="mb-md">
+                <h3>知识库</h3>
+                <p class="text-muted text-sm">上传文档和图片构建知识库</p>
+            </div>
+
+            <div class="mb-lg">
+                <input type="file" id="file-input" multiple accept=".txt,.pdf,.doc,.docx,.png,.jpg,.jpeg,.gif,.bmp,.webp" style="display: none;" onchange="uploadFiles()">
+                <button class="btn" onclick="document.getElementById('file-input').click()">上传文件</button>
+            </div>
+
+            <div id="knowledge-list" class="list">
+                <!-- 知识库文件列表将通过JavaScript动态加载 -->
+            </div>
+        </div>
+
+        <!-- 右侧：PPT项目 -->
+        <div>
+            <div class="mb-md">
+                <h3>PPT项目</h3>
+                <p class="text-muted text-sm">创建PPT项目并生成演示文稿</p>
+            </div>
+
+            <div class="mb-lg">
+                <button class="btn btn-primary" onclick="showCreatePPTModal()">创建PPT</button>
+            </div>
+
+            <div id="ppt-list" class="grid">
+                <!-- PPT项目列表将通过JavaScript动态加载 -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 创建PPT模态框 -->
+<div id="create-ppt-modal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-header">
+            <button class="modal-close" onclick="hideCreatePPTModal()">&times;</button>
+            <h3 class="modal-title">创建PPT项目</h3>
+        </div>
+        <form id="create-ppt-form" onsubmit="createPPT(event)">
+            <div class="mb-md">
+                <label for="ppt-title">PPT标题</label>
+                <input type="text" id="ppt-title" name="title" required>
+            </div>
+            <div class="mb-md">
+                <label for="ppt-prompt">内容描述</label>
+                <textarea id="ppt-prompt" name="user_prompt" required placeholder="描述您想要的PPT内容..."></textarea>
+            </div>
+            <div class="mb-lg">
+                <label for="ppt-pages">预期页数</label>
+                <input type="number" id="ppt-pages" name="expected_pages" value="10" min="5" max="50">
+            </div>
+            <div class="text-right">
+                <button type="button" class="btn" onclick="hideCreatePPTModal()">取消</button>
+                <button type="submit" class="btn btn-primary">创建</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+    const workspaceId = {{ workspace_id }};
+</script>
+<script src="{{ url_for('static', filename='js/workspace.js') }}"></script>
+<script>
+    // 页面加载时获取数据
+    document.addEventListener('DOMContentLoaded', () => {
+        loadWorkspaceDetail(workspaceId);
+        loadKnowledgeFiles(workspaceId);
+        loadPPTProjects(workspaceId);
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}编辑大纲 - EasyAIPPT{% endblock %}
+
+{% block nav_links %}
+<a href="/" class="nav-link">返回首页</a>
+{% endblock %}
+
+{% block content %}
+<div class="container-narrow">
+    <div class="mb-xl text-center">
+        <h1 id="ppt-title">PPT大纲</h1>
+        <p id="ppt-prompt" class="text-muted"></p>
+    </div>
+
+    <div class="mb-lg text-center">
+        <button class="btn" onclick="regenerateOutline()">重新生成大纲</button>
+        <button class="btn btn-primary" onclick="confirmOutline()">确认大纲</button>
+    </div>
+
+    <div id="outline-list">
+        <!-- 大纲列表将通过JavaScript动态加载 -->
+    </div>
+
+    <div id="loading" class="text-center mt-xl hidden">
+        <div class="loading"></div>
+        <p class="text-muted mt-md">正在生成大纲...</p>
+    </div>
+</div>
+
+<!-- 编辑大纲页模态框 -->
+<div id="edit-modal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-header">
+            <button class="modal-close" onclick="hideEditModal()">&times;</button>
+            <h3 class="modal-title">编辑页面</h3>
+        </div>
+        <form id="edit-form" onsubmit="saveOutlinePage(event)">
+            <input type="hidden" id="edit-page-number">
+            <div class="mb-md">
+                <label for="edit-title">标题</label>
+                <input type="text" id="edit-title" required>
+            </div>
+            <div class="mb-md">
+                <label for="edit-content">内容描述</label>
+                <textarea id="edit-content" required></textarea>
+            </div>
+            <div class="mb-lg">
+                <label for="edit-prompt">图片提示词（可选）</label>
+                <textarea id="edit-prompt"></textarea>
+            </div>
+            <div class="text-right">
+                <button type="button" class="btn" onclick="hideEditModal()">取消</button>
+                <button type="submit" class="btn btn-primary">保存</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+    const projectId = {{ project_id }};
+</script>
+<script src="{{ url_for('static', filename='js/outline.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        loadProjectInfo(projectId);
+        loadOutline(projectId);
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,178 @@
+"""PPT生成相关路由"""
+from flask import Blueprint, request, jsonify, render_template, Response, send_file
+import json
+import os
+import zipfile
+import io
+from database.db_manager import DBManager
+from services.banana_service import BananaService
+from services.ppt_generator import PPTGenerator
+
+ppt_bp = Blueprint('ppt', __name__)
+
+
+def init_routes(db_manager: DBManager, banana_service: BananaService, ppt_generator: PPTGenerator):
+    """初始化路由"""
+
+    @ppt_bp.route('/api/workspaces/<int:workspace_id>/ppt/create', methods=['POST'])
+    def create_ppt_project(workspace_id):
+        """创建PPT项目"""
+        try:
+            workspace = db_manager.get_workspace(workspace_id)
+            if not workspace:
+                return jsonify({'success': False, 'error': '工作空间不存在'}), 404
+
+            data = request.get_json()
+            title = data.get('title', '').strip()
+            user_prompt = data.get('user_prompt', '').strip()
+            expected_pages = data.get('expected_pages', 10)
+
+            if not title or not user_prompt:
+                return jsonify({'success': False, 'error': '标题和提示词不能为空'}), 400
+
+            project_id = db_manager.create_ppt_project(workspace_id, title, user_prompt, expected_pages)
+            return jsonify({'success': True, 'data': {'id': project_id}})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @ppt_bp.route('/api/ppt/<int:project_id>', methods=['GET'])
+    def get_ppt_project(project_id):
+        """获取PPT项目详情"""
+        try:
+            project = db_manager.get_ppt_project(project_id)
+            if not project:
+                return jsonify({'success': False, 'error': 'PPT项目不存在'}), 404
+
+            return jsonify({'success': True, 'data': project})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @ppt_bp.route('/api/ppt/<int:project_id>', methods=['DELETE'])
+    def delete_ppt_project(project_id):
+        """删除PPT项目"""
+        try:
+            project = db_manager.get_ppt_project(project_id)
+            if not project:
+                return jsonify({'success': False, 'error': 'PPT项目不存在'}), 404
+
+            db_manager.delete_ppt_project(project_id)
+            return jsonify({'success': True})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @ppt_bp.route('/api/ppt/<int:project_id>/styles/generate', methods=['POST'])
+    def generate_styles(project_id):
+        """生成样式模板"""
+        try:
+            project = db_manager.get_ppt_project(project_id)
+            if not project:
+                return jsonify({'success': False, 'error': 'PPT项目不存在'}), 404
+
+            # 生成3个样式模板
+            styles = ppt_generator.generate_style_templates(project_id, project)
+
+            return jsonify({'success': True, 'data': styles})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @ppt_bp.route('/api/ppt/<int:project_id>/styles', methods=['GET'])
+    def get_styles(project_id):
+        """获取样式模板列表"""
+        try:
+            styles = db_manager.get_style_templates(project_id)
+            return jsonify({'success': True, 'data': styles})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @ppt_bp.route('/api/ppt/<int:project_id>/styles/select', methods=['POST'])
+    def select_style(project_id):
+        """选择样式模板"""
+        try:
+            data = request.get_json()
+            style_index = data.get('style_index')
+
+            if style_index is None or style_index not in [0, 1, 2]:
+                return jsonify({'success': False, 'error': '无效的样式索引'}), 400
+
+            db_manager.update_ppt_project_style(project_id, style_index)
+            db_manager.update_ppt_project_status(project_id, 'style_selected')
+
+            return jsonify({'success': True})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @ppt_bp.route('/api/ppt/<int:project_id>/pages/generate', methods=['POST'])
+    def generate_pages(project_id):
+        """开始生成所有页面"""
+        try:
+            project = db_manager.get_ppt_project(project_id)
+            if not project:
+                return jsonify({'success': False, 'error': 'PPT项目不存在'}), 404
+
+            # 启动生成任务（异步）
+            ppt_generator.start_generation(project_id)
+
+            return jsonify({'success': True})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @ppt_bp.route('/api/ppt/<int:project_id>/pages/status')
+    def get_pages_status(project_id):
+        """获取生成进度（SSE）"""
+        def generate():
+            try:
+                for progress in ppt_generator.get_generation_progress(project_id):
+                    yield f"data: {json.dumps(progress, ensure_ascii=False)}\n\n"
+            except Exception as e:
+                yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
+
+        return Response(generate(), mimetype='text/event-stream')
+
+    @ppt_bp.route('/api/ppt/<int:project_id>/pages/<int:page_number>/regenerate', methods=['POST'])
+    def regenerate_page(project_id, page_number):
+        """重新生成单页"""
+        try:
+            project = db_manager.get_ppt_project(project_id)
+            if not project:
+                return jsonify({'success': False, 'error': 'PPT项目不存在'}), 404
+
+            result = ppt_generator.regenerate_single_page(project_id, page_number)
+
+            return jsonify({'success': True, 'data': result})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @ppt_bp.route('/api/ppt/<int:project_id>/pages/download')
+    def download_pages(project_id):
+        """下载所有PPT图片（ZIP）"""
+        try:
+            project = db_manager.get_ppt_project(project_id)
+            if not project:
+                return jsonify({'success': False, 'error': 'PPT项目不存在'}), 404
+
+            pages = db_manager.get_ppt_pages(project_id)
+
+            # 创建ZIP文件
+            memory_file = io.BytesIO()
+            with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+                for page in pages:
+                    if page['image_path'] and os.path.exists(page['image_path']):
+                        filename = f"page_{page['page_number']:03d}.png"
+                        zf.write(page['image_path'], filename)
+
+            memory_file.seek(0)
+            return send_file(
+                memory_file,
+                mimetype='application/zip',
+                as_attachment=True,
+                download_name=f"{project['title']}_ppt.zip"
+            )
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @ppt_bp.route('/ppt/<int:project_id>')
+    def ppt_preview(project_id):
+        """PPT预览页"""
+        return render_template('ppt_preview.html', project_id=project_id)
+
+    return ppt_bp

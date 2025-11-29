@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}工作空间 - EasyAIPPT{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="text-center mb-xl">
+        <h1>工作空间</h1>
+        <p class="text-muted">创建工作空间，开始制作您的AI PPT</p>
+    </div>
+
+    <div class="text-center mb-lg">
+        <button class="btn btn-primary btn-lg" onclick="showCreateModal()">创建工作空间</button>
+    </div>
+
+    <div id="workspaces-grid" class="grid grid-3">
+        <!-- 工作空间卡片将通过JavaScript动态加载 -->
+    </div>
+
+    <div id="loading" class="text-center mt-xl hidden">
+        <div class="loading"></div>
+    </div>
+</div>
+
+<!-- 创建工作空间模态框 -->
+<div id="create-modal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-header">
+            <button class="modal-close" onclick="hideCreateModal()">&times;</button>
+            <h3 class="modal-title">创建工作空间</h3>
+        </div>
+        <form id="create-form" onsubmit="createWorkspace(event)">
+            <div class="mb-md">
+                <label for="workspace-name">名称</label>
+                <input type="text" id="workspace-name" name="name" required>
+            </div>
+            <div class="mb-lg">
+                <label for="workspace-desc">描述（可选）</label>
+                <textarea id="workspace-desc" name="description"></textarea>
+            </div>
+            <div class="text-right">
+                <button type="button" class="btn" onclick="hideCreateModal()">取消</button>
+                <button type="submit" class="btn btn-primary">创建</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script src="{{ url_for('static', filename='js/workspace.js') }}"></script>
+<script>
+    // 页面加载时获取工作空间列表
+    document.addEventListener('DOMContentLoaded', loadWorkspaces);
+</script>
+{% endblock %}

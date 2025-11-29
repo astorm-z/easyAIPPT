@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}PPT预览 - EasyAIPPT{% endblock %}
+
+{% block nav_links %}
+<a href="/" class="nav-link">返回首页</a>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="mb-xl text-center">
+        <h1 id="ppt-title">PPT预览</h1>
+    </div>
+
+    <!-- 样式模板选择 -->
+    <div id="style-section" class="mb-xl">
+        <h3 class="mb-md">选择样式模板</h3>
+        <div class="mb-lg">
+            <button class="btn" onclick="generateStyles()">生成样式模板</button>
+        </div>
+        <div id="styles-grid" class="grid grid-3">
+            <!-- 样式模板将通过JavaScript动态加载 -->
+        </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- PPT页面生成 -->
+    <div id="pages-section">
+        <div class="mb-md">
+            <h3>PPT页面</h3>
+            <div class="mb-lg">
+                <button class="btn btn-primary" onclick="startGeneration()" id="generate-btn">开始生成</button>
+                <button class="btn" onclick="downloadPPT()" id="download-btn" disabled>下载PPT</button>
+            </div>
+        </div>
+
+        <!-- 进度条 -->
+        <div id="progress-section" class="mb-lg hidden">
+            <div class="progress">
+                <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
+            </div>
+            <p id="progress-text" class="text-center text-muted mt-sm">准备中...</p>
+        </div>
+
+        <!-- PPT页面网格 -->
+        <div id="pages-grid" class="grid grid-3">
+            <!-- PPT页面将通过JavaScript动态加载 -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+    const projectId = {{ project_id }};
+</script>
+<script src="{{ url_for('static', filename='js/progress.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        loadProjectInfo(projectId);
+        loadStyles(projectId);
+        loadPages(projectId);
+    });
+</script>
+{% endblock %}
