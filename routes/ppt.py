@@ -86,11 +86,15 @@ def init_routes(db_manager: DBManager, banana_service: BananaService, ppt_genera
                 logger.warning(f"项目不存在: project_id={project_id}")
                 return jsonify({'success': False, 'error': 'PPT项目不存在'}), 404
 
+            # 获取自定义提示词（可选）
+            data = request.get_json() or {}
+            custom_prompt = data.get('custom_prompt', '').strip()
+
             # 在新线程中异步生成样式模板
             def generate_async():
                 try:
-                    logger.info(f"开始异步生成样式模板: project_id={project_id}")
-                    ppt_generator.generate_style_templates(project_id, project)
+                    logger.info(f"开始异步生成样式模板: project_id={project_id}, custom_prompt={custom_prompt}")
+                    ppt_generator.generate_style_templates(project_id, project, custom_prompt=custom_prompt)
                     logger.info(f"样式模板生成完成: project_id={project_id}")
                 except Exception as e:
                     logger.error(f"样式模板生成失败: project_id={project_id}, error={str(e)}")
@@ -224,7 +228,11 @@ def init_routes(db_manager: DBManager, banana_service: BananaService, ppt_genera
             if not project:
                 return jsonify({'success': False, 'error': 'PPT项目不存在'}), 404
 
-            result = ppt_generator.regenerate_single_page(project_id, page_number)
+            # 获取自定义提示词（可选）
+            data = request.get_json() or {}
+            custom_prompt = data.get('custom_prompt', '').strip()
+
+            result = ppt_generator.regenerate_single_page(project_id, page_number, custom_prompt=custom_prompt)
 
             return jsonify({'success': True, 'data': result})
         except Exception as e:

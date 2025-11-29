@@ -18,9 +18,9 @@ class PPTGenerator:
         self.style_generation_status = {}  # 存储样式生成状态
         logger.info("PPTGenerator初始化完成")
 
-    def generate_style_templates(self, project_id, project):
+    def generate_style_templates(self, project_id, project, custom_prompt=''):
         """生成3个样式模板"""
-        logger.info(f"开始为项目 {project_id} 生成样式模板")
+        logger.info(f"开始为项目 {project_id} 生成样式模板, custom_prompt={custom_prompt}")
 
         # 初始化状态
         self.style_generation_status[project_id] = {
@@ -52,13 +52,18 @@ class PPTGenerator:
         ]
 
         for i, description in enumerate(style_descriptions):
-            logger.info(f"正在生成样式模板 {i+1}/3: {description}")
+            # 如果有自定义提示词，追加到描述后面
+            final_description = description
+            if custom_prompt:
+                final_description = f"{description}。额外要求：{custom_prompt}"
+
+            logger.info(f"正在生成样式模板 {i+1}/3: {final_description}")
             self.style_generation_status[project_id]['current'] = i + 1
             self.style_generation_status[project_id]['message'] = f'正在生成样式 {i+1}/3...'
 
             output_path = os.path.join(output_dir, f'style_{i}.png')
             try:
-                self.banana_service.generate_style_template(description, output_path)
+                self.banana_service.generate_style_template(final_description, output_path)
                 logger.info(f"样式模板 {i+1} 生成成功: {output_path}")
 
                 style_id = self.db_manager.add_style_template(project_id, i, output_path)
@@ -256,7 +261,7 @@ class PPTGenerator:
             import time
             time.sleep(2)  # 每2秒推送一次
 
-    def regenerate_single_page(self, project_id, page_number):
+    def regenerate_single_page(self, project_id, page_number, custom_prompt=''):
         """重新生成单页"""
         try:
             # 获取项目信息
@@ -293,6 +298,10 @@ class PPTGenerator:
             page_content = f"标题: {page['title']}\n内容: {page['content']}"
             if page['image_prompt']:
                 page_content += f"\n图片提示: {page['image_prompt']}"
+
+            # 如果有自定义提示词，追加到内容后面
+            if custom_prompt:
+                page_content += f"\n额外要求: {custom_prompt}"
 
             # 生成图片
             style_ref = selected_style['image_path'] if selected_style else ''

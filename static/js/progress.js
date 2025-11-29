@@ -52,12 +52,18 @@ function convertPathToUrl(filePath) {
 
 // 生成样式模板
 async function generateStyles() {
-    if (!confirm('生成样式模板需要一些时间，确定吗？')) return;
+    // 弹出对话框让用户输入自定义提示词
+    const customPrompt = prompt('可选：输入自定义提示词来影响样式生成（留空则使用默认样式）');
+
+    // 用户点击取消则不继续
+    if (customPrompt === null) return;
 
     try {
         // 启动生成任务
+        const body = customPrompt.trim() ? { custom_prompt: customPrompt.trim() } : {};
         await apiRequest(`/api/ppt/${projectId}/styles/generate`, {
-            method: 'POST'
+            method: 'POST',
+            body: JSON.stringify(body)
         });
 
         // 显示进度区域
@@ -307,11 +313,17 @@ function listenProgress() {
 
 // 重新生成单页
 async function regeneratePage(pageNumber) {
-    if (!confirm(`确定要重新生成第 ${pageNumber} 页吗？`)) return;
+    // 弹出对话框让用户输入自定义提示词
+    const customPrompt = prompt(`可选：输入自定义提示词来影响第 ${pageNumber} 页的生成（留空则使用默认提示词）`);
+
+    // 用户点击取消则不继续
+    if (customPrompt === null) return;
 
     try {
+        const body = customPrompt.trim() ? { custom_prompt: customPrompt.trim() } : {};
         await apiRequest(`/api/ppt/${projectId}/pages/${pageNumber}/regenerate`, {
-            method: 'POST'
+            method: 'POST',
+            body: JSON.stringify(body)
         });
         showSuccess('重新生成成功');
         await loadPages(projectId);
