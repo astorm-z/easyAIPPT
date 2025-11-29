@@ -1,5 +1,6 @@
 """文件处理服务"""
 import os
+import uuid
 from werkzeug.utils import secure_filename
 from PIL import Image
 import PyPDF2
@@ -94,25 +95,22 @@ class FileProcessor:
             if not self.allowed_file(file.filename):
                 return {'success': False, 'error': f'不支持的文件类型: {file.filename}'}
 
-            # 安全的文件名
-            filename = secure_filename(file.filename)
-            file_type = self.get_file_type(filename)
+            # 保存原始文件名
+            original_filename = file.filename
+
+            # 获取文件扩展名
+            _, ext = os.path.splitext(original_filename)
+            file_type = self.get_file_type(original_filename)
+
+            # 使用UUID生成唯一文件名，避免冲突和中文问题
+            unique_filename = f"{uuid.uuid4().hex}{ext}"
 
             # 创建工作空间目录
             workspace_dir = os.path.join(self.config.UPLOAD_FOLDER, f'workspace_{workspace_id}', 'knowledge')
             os.makedirs(workspace_dir, exist_ok=True)
 
             # 保存文件
-            file_path = os.path.join(workspace_dir, filename)
-
-            # 如果文件已存在，添加序号
-            base_name, ext = os.path.splitext(filename)
-            counter = 1
-            while os.path.exists(file_path):
-                filename = f"{base_name}_{counter}{ext}"
-                file_path = os.path.join(workspace_dir, filename)
-                counter += 1
-
+            file_path = os.path.join(workspace_dir, unique_filename)
             file.save(file_path)
             file_size = os.path.getsize(file_path)
 
@@ -122,18 +120,20 @@ class FileProcessor:
             # 保存到数据库
             file_id = db_manager.add_knowledge_file(
                 workspace_id,
-                filename,
+                unique_filename,
                 file_type,
                 file_path,
                 file_size,
-                extracted_text
+                extracted_text,
+                original_filename
             )
 
             return {
                 'success': True,
                 'data': {
                     'id': file_id,
-                    'filename': filename,
+                    'filename': unique_filename,
+                    'original_filename': original_filename,
                     'file_type': file_type,
                     'file_size': file_size
                 }

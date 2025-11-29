@@ -1,5 +1,5 @@
 """知识库相关路由"""
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, send_file
 from werkzeug.utils import secure_filename
 import os
 from database.db_manager import DBManager
@@ -55,6 +55,58 @@ def init_routes(db_manager: DBManager, file_processor: FileProcessor):
 
             files = db_manager.get_knowledge_files(workspace_id)
             return jsonify({'success': True, 'data': files})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @knowledge_bp.route('/api/knowledge/<int:file_id>/preview', methods=['GET'])
+    def preview_knowledge_file(file_id):
+        """预览知识库文件"""
+        try:
+            file_info = db_manager.get_knowledge_file(file_id)
+            if not file_info:
+                return jsonify({'success': False, 'error': '文件不存在'}), 404
+
+            # 检查文件是否存在
+            if not os.path.exists(file_info['file_path']):
+                return jsonify({'success': False, 'error': '文件已丢失'}), 404
+
+            # 对于图片文件，直接返回文件
+            if file_info['file_type'] == 'image':
+                return send_file(file_info['file_path'])
+
+            # 对于其他文件，返回提取的文本内容
+            return jsonify({
+                'success': True,
+                'data': {
+                    'filename': file_info.get('original_filename') or file_info['filename'],
+                    'file_type': file_info['file_type'],
+                    'content': file_info.get('extracted_text', ''),
+                    'file_size': file_info['file_size']
+                }
+            })
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @knowledge_bp.route('/api/knowledge/<int:file_id>/download', methods=['GET'])
+    def download_knowledge_file(file_id):
+        """下载知识库文件"""
+        try:
+            file_info = db_manager.get_knowledge_file(file_id)
+            if not file_info:
+                return jsonify({'success': False, 'error': '文件不存在'}), 404
+
+            # 检查文件是否存在
+            if not os.path.exists(file_info['file_path']):
+                return jsonify({'success': False, 'error': '文件已丢失'}), 404
+
+            # 使用原始文件名作为下载文件名
+            download_name = file_info.get('original_filename') or file_info['filename']
+
+            return send_file(
+                file_info['file_path'],
+                as_attachment=True,
+                download_name=download_name
+            )
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
 

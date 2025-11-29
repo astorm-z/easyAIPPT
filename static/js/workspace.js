@@ -99,15 +99,23 @@ function displayKnowledgeFiles(files) {
         return;
     }
 
-    list.innerHTML = files.map(file => `
-        <div class="list-item">
-            <div>
-                <div>${file.filename}</div>
-                <div class="text-muted text-sm">${formatFileSize(file.file_size)}</div>
+    list.innerHTML = files.map(file => {
+        const displayName = file.original_filename || file.filename;
+        const escapedName = displayName.replace(/'/g, "\\'");
+        return `
+            <div class="list-item">
+                <div>
+                    <div>${displayName}</div>
+                    <div class="text-muted text-sm">${formatFileSize(file.file_size)}</div>
+                </div>
+                <div>
+                    <button class="btn btn-sm" onclick="previewKnowledgeFile(${file.id}, '${file.file_type}')">预览</button>
+                    <button class="btn btn-sm" onclick="downloadKnowledgeFile(${file.id}, '${escapedName}')">下载</button>
+                    <button class="btn btn-sm" onclick="deleteKnowledgeFile(${file.id})">删除</button>
+                </div>
             </div>
-            <button class="btn btn-sm" onclick="deleteKnowledgeFile(${file.id})">删除</button>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 // 上传文件
@@ -135,6 +143,49 @@ async function uploadFiles() {
     } catch (error) {
         showError(error.message);
     }
+}
+
+// 预览知识库文件
+async function previewKnowledgeFile(fileId, fileType) {
+    try {
+        if (fileType === 'image') {
+            // 图片直接在新窗口打开
+            window.open(`/api/knowledge/${fileId}/preview`, '_blank');
+        } else {
+            // 其他文件获取文本内容并显示
+            const response = await apiRequest(`/api/knowledge/${fileId}/preview`);
+            showPreviewModal(response.filename, response.content, response.file_type);
+        }
+    } catch (error) {
+        showError('预览失败: ' + error.message);
+    }
+}
+
+// 显示预览模态框
+function showPreviewModal(filename, content, fileType) {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.style.display = 'block';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3>文件预览: ${filename}</h3>
+                <button class="btn-close" onclick="this.closest('.modal').remove()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <pre style="white-space: pre-wrap; max-height: 500px; overflow-y: auto; background: var(--color-gray-50); padding: 1rem; border-radius: 4px;">${content || '无内容'}</pre>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="this.closest('.modal').remove()">关闭</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+// 下载知识库文件
+function downloadKnowledgeFile(fileId, filename) {
+    window.location.href = `/api/knowledge/${fileId}/download`;
 }
 
 // 删除知识库文件

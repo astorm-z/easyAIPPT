@@ -45,15 +45,16 @@ class DBManager:
     # ==================== 知识库文件操作 ====================
 
     def add_knowledge_file(self, workspace_id: int, filename: str, file_type: str,
-                          file_path: str, file_size: int, extracted_text: str = '') -> int:
+                          file_path: str, file_size: int, extracted_text: str = '',
+                          original_filename: str = '') -> int:
         """添加知识库文件"""
         query = '''
             INSERT INTO knowledge_files
-            (workspace_id, filename, file_type, file_path, file_size, extracted_text)
-            VALUES (?, ?, ?, ?, ?, ?)
+            (workspace_id, filename, original_filename, file_type, file_path, file_size, extracted_text)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         '''
-        return self.db.execute_update(query, (workspace_id, filename, file_type,
-                                              file_path, file_size, extracted_text))
+        return self.db.execute_update(query, (workspace_id, filename, original_filename or filename,
+                                              file_type, file_path, file_size, extracted_text))
 
     def get_knowledge_files(self, workspace_id: int) -> List[Dict[str, Any]]:
         """获取工作空间的所有知识库文件"""

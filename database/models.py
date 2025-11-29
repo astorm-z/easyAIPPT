@@ -39,6 +39,7 @@ class Database:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 workspace_id INTEGER NOT NULL,
                 filename TEXT NOT NULL,
+                original_filename TEXT,
                 file_type TEXT NOT NULL,
                 file_path TEXT NOT NULL,
                 file_size INTEGER,
@@ -47,6 +48,12 @@ class Database:
                 FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
             )
         ''')
+
+        # 添加 original_filename 字段（如果不存在）
+        try:
+            cursor.execute("SELECT original_filename FROM knowledge_files LIMIT 1")
+        except sqlite3.OperationalError:
+            cursor.execute("ALTER TABLE knowledge_files ADD COLUMN original_filename TEXT")
 
         # 创建PPT项目表
         cursor.execute('''
