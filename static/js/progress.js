@@ -76,8 +76,7 @@ async function selectStyle(styleIndex) {
 // 加载PPT页面
 async function loadPages(projectId) {
     try {
-        const pages = await apiRequest(`/api/ppt/${projectId}/pages/status`.replace('/status', ''));
-        // 注意：这里需要调整API路径
+        const pages = await apiRequest(`/api/ppt/${projectId}/pages`);
         displayPages(pages);
     } catch (error) {
         console.error('加载PPT页面失败:', error);

@@ -153,8 +153,7 @@ async function deleteKnowledgeFile(fileId) {
 // 加载PPT项目列表
 async function loadPPTProjects(workspaceId) {
     try {
-        const projects = await apiRequest(`/api/workspaces/${workspaceId}/ppt/create`.replace('/create', ''));
-        // 注意：这里需要调整API路径
+        const projects = await apiRequest(`/api/workspaces/${workspaceId}/ppt`);
         displayPPTProjects(projects);
     } catch (error) {
         console.error('加载PPT项目失败:', error);

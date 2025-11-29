@@ -14,6 +14,19 @@ ppt_bp = Blueprint('ppt', __name__)
 def init_routes(db_manager: DBManager, banana_service: BananaService, ppt_generator: PPTGenerator):
     """初始化路由"""
 
+    @ppt_bp.route('/api/workspaces/<int:workspace_id>/ppt', methods=['GET'])
+    def get_workspace_ppt_projects(workspace_id):
+        """获取工作空间的所有PPT项目"""
+        try:
+            workspace = db_manager.get_workspace(workspace_id)
+            if not workspace:
+                return jsonify({'success': False, 'error': '工作空间不存在'}), 404
+
+            projects = db_manager.get_ppt_projects(workspace_id)
+            return jsonify({'success': True, 'data': projects})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
     @ppt_bp.route('/api/workspaces/<int:workspace_id>/ppt/create', methods=['POST'])
     def create_ppt_project(workspace_id):
         """创建PPT项目"""
@@ -98,6 +111,19 @@ def init_routes(db_manager: DBManager, banana_service: BananaService, ppt_genera
             db_manager.update_ppt_project_status(project_id, 'style_selected')
 
             return jsonify({'success': True})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @ppt_bp.route('/api/ppt/<int:project_id>/pages', methods=['GET'])
+    def get_pages(project_id):
+        """获取PPT页面列表"""
+        try:
+            project = db_manager.get_ppt_project(project_id)
+            if not project:
+                return jsonify({'success': False, 'error': 'PPT项目不存在'}), 404
+
+            pages = db_manager.get_ppt_pages(project_id)
+            return jsonify({'success': True, 'data': pages})
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
 
