@@ -1,7 +1,10 @@
 """PPT生成流程控制"""
 import os
+import logging
 import threading
 from typing import Generator, Dict, Any
+
+logger = logging.getLogger(__name__)
 
 
 class PPTGenerator:
@@ -12,11 +15,24 @@ class PPTGenerator:
         self.db_manager = db_manager
         self.banana_service = banana_service
         self.generation_status = {}  # 存储生成状态
+        self.style_generation_status = {}  # 存储样式生成状态
+        logger.info("PPTGenerator初始化完成")
 
     def generate_style_templates(self, project_id, project):
         """生成3个样式模板"""
+        logger.info(f"开始为项目 {project_id} 生成样式模板")
+
+        # 初始化状态
+        self.style_generation_status[project_id] = {
+            'current': 0,
+            'total': 3,
+            'status': 'generating',
+            'message': '准备生成样式模板...'
+        }
+
         # 删除旧的样式模板
         self.db_manager.delete_style_templates(project_id)
+        logger.info(f"已删除项目 {project_id} 的旧样式模板")
 
         # 创建输出目录
         output_dir = os.path.join(
@@ -26,6 +42,7 @@ class PPTGenerator:
             'styles'
         )
         os.makedirs(output_dir, exist_ok=True)
+        logger.info(f"创建输出目录: {output_dir}")
 
         styles = []
         style_descriptions = [
@@ -35,9 +52,15 @@ class PPTGenerator:
         ]
 
         for i, description in enumerate(style_descriptions):
+            logger.info(f"正在生成样式模板 {i+1}/3: {description}")
+            self.style_generation_status[project_id]['current'] = i + 1
+            self.style_generation_status[project_id]['message'] = f'正在生成样式 {i+1}/3...'
+
             output_path = os.path.join(output_dir, f'style_{i}.png')
             try:
                 self.banana_service.generate_style_template(description, output_path)
+                logger.info(f"样式模板 {i+1} 生成成功: {output_path}")
+
                 style_id = self.db_manager.add_style_template(project_id, i, output_path)
                 styles.append({
                     'id': style_id,
@@ -45,8 +68,14 @@ class PPTGenerator:
                     'image_path': output_path
                 })
             except Exception as e:
+                logger.error(f"生成样式模板 {i+1} 失败: {str(e)}")
+                self.style_generation_status[project_id]['status'] = 'failed'
+                self.style_generation_status[project_id]['message'] = f'生成样式 {i+1} 失败: {str(e)}'
                 raise Exception(f'生成样式模板{i}失败: {str(e)}')
 
+        self.style_generation_status[project_id]['status'] = 'completed'
+        self.style_generation_status[project_id]['message'] = '样式模板生成完成'
+        logger.info(f"项目 {project_id} 的所有样式模板生成完成")
         return styles
 
     def start_generation(self, project_id):

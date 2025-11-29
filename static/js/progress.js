@@ -44,18 +44,103 @@ function displayStyles(styles) {
 async function generateStyles() {
     if (!confirm('生成样式模板需要一些时间，确定吗？')) return;
 
-    showLoading('loading');
     try {
-        const styles = await apiRequest(`/api/ppt/${projectId}/styles/generate`, {
+        // 启动生成任务
+        await apiRequest(`/api/ppt/${projectId}/styles/generate`, {
             method: 'POST'
         });
-        showSuccess('样式模板生成成功');
-        displayStyles(styles);
+
+        // 显示进度区域
+        showStyleProgress();
+
+        // 开始轮询进度
+        pollStyleProgress();
     } catch (error) {
-        showError('样式模板生成失败: ' + error.message);
-    } finally {
-        hideLoading('loading');
+        showError('启动样式生成失败: ' + error.message);
     }
+}
+
+// 显示样式生成进度
+function showStyleProgress() {
+    const section = document.getElementById('style-section');
+    if (!section) return;
+
+    // 添加进度显示区域
+    let progressDiv = document.getElementById('style-progress');
+    if (!progressDiv) {
+        progressDiv = document.createElement('div');
+        progressDiv.id = 'style-progress';
+        progressDiv.className = 'mb-lg';
+        progressDiv.innerHTML = `
+            <div class="progress">
+                <div id="style-progress-bar" class="progress-bar" style="width: 0%"></div>
+            </div>
+            <p id="style-progress-text" class="text-center text-muted mt-sm">准备中...</p>
+        `;
+        section.insertBefore(progressDiv, document.getElementById('styles-grid'));
+    }
+    progressDiv.classList.remove('hidden');
+}
+
+// 隐藏样式生成进度
+function hideStyleProgress() {
+    const progressDiv = document.getElementById('style-progress');
+    if (progressDiv) {
+        progressDiv.classList.add('hidden');
+    }
+}
+
+// 轮询样式生成进度
+async function pollStyleProgress() {
+    const maxAttempts = 300; // 最多轮询5分钟（每秒一次）
+    let attempts = 0;
+
+    const poll = async () => {
+        try {
+            const status = await apiRequest(`/api/ppt/${projectId}/styles/status`);
+
+            // 更新进度条
+            const progress = (status.current / status.total) * 100;
+            const progressBar = document.getElementById('style-progress-bar');
+            const progressText = document.getElementById('style-progress-text');
+
+            if (progressBar) {
+                progressBar.style.width = progress + '%';
+            }
+            if (progressText) {
+                progressText.textContent = status.message || `正在生成 ${status.current}/${status.total}`;
+            }
+
+            // 检查状态
+            if (status.status === 'completed') {
+                showSuccess('样式模板生成完成！');
+                hideStyleProgress();
+                await loadStyles(projectId);
+                return;
+            } else if (status.status === 'failed') {
+                showError('样式模板生成失败: ' + status.message);
+                hideStyleProgress();
+                return;
+            }
+
+            // 继续轮询
+            attempts++;
+            if (attempts < maxAttempts) {
+                setTimeout(poll, 1000); // 每秒轮询一次
+            } else {
+                showError('样式生成超时，请刷新页面查看结果');
+                hideStyleProgress();
+            }
+        } catch (error) {
+            console.error('轮询进度失败:', error);
+            attempts++;
+            if (attempts < maxAttempts) {
+                setTimeout(poll, 1000);
+            }
+        }
+    };
+
+    poll();
 }
 
 // 选择样式

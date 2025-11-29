@@ -75,16 +75,48 @@ def init_routes(db_manager: DBManager, banana_service: BananaService, ppt_genera
 
     @ppt_bp.route('/api/ppt/<int:project_id>/styles/generate', methods=['POST'])
     def generate_styles(project_id):
-        """生成样式模板"""
+        """生成样式模板（异步）"""
+        import logging
+        logger = logging.getLogger(__name__)
+
         try:
+            logger.info(f"收到生成样式模板请求: project_id={project_id}")
             project = db_manager.get_ppt_project(project_id)
             if not project:
+                logger.warning(f"项目不存在: project_id={project_id}")
                 return jsonify({'success': False, 'error': 'PPT项目不存在'}), 404
 
-            # 生成3个样式模板
-            styles = ppt_generator.generate_style_templates(project_id, project)
+            # 在新线程中异步生成样式模板
+            def generate_async():
+                try:
+                    logger.info(f"开始异步生成样式模板: project_id={project_id}")
+                    ppt_generator.generate_style_templates(project_id, project)
+                    logger.info(f"样式模板生成完成: project_id={project_id}")
+                except Exception as e:
+                    logger.error(f"样式模板生成失败: project_id={project_id}, error={str(e)}")
 
-            return jsonify({'success': True, 'data': styles})
+            import threading
+            thread = threading.Thread(target=generate_async)
+            thread.daemon = True
+            thread.start()
+            logger.info(f"样式生成线程已启动: project_id={project_id}")
+
+            return jsonify({'success': True, 'message': '样式生成任务已启动'})
+        except Exception as e:
+            logger.error(f"启动样式生成失败: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @ppt_bp.route('/api/ppt/<int:project_id>/styles/status', methods=['GET'])
+    def get_styles_status(project_id):
+        """获取样式生成进度"""
+        try:
+            status = ppt_generator.style_generation_status.get(project_id, {
+                'current': 0,
+                'total': 3,
+                'status': 'idle',
+                'message': '未开始'
+            })
+            return jsonify({'success': True, 'data': status})
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
 
