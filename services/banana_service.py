@@ -2,23 +2,23 @@
 import os
 import time
 import logging
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from PIL import Image
-import io
 
 logger = logging.getLogger(__name__)
 
 
 class BananaService:
-    """Gemini图片生成服务（原Banana服务）"""
+    """Gemini图片生成服务（Nano Banana Pro）"""
 
     def __init__(self, config):
         self.config = config
-        # 使用Gemini API密钥
-        genai.configure(api_key=config.GEMINI_API_KEY)
-        # 使用Gemini的图片生成模型
-        self.model_name = 'gemini-2.0-flash-exp'  # Gemini 2.0支持图片生成
-        logger.info(f"BananaService初始化完成 - 使用Gemini模型: {self.model_name}")
+        # 初始化Gemini客户端
+        self.client = genai.Client(api_key=config.GEMINI_API_KEY)
+        # 使用Gemini 3 Pro Image Preview模型（Nano Banana Pro）
+        self.model_name = 'gemini-3-pro-image-preview'
+        logger.info(f"BananaService初始化完成 - 使用模型: {self.model_name}")
 
     def load_prompt(self, prompt_file):
         """加载提示词文件"""
@@ -45,42 +45,42 @@ class BananaService:
                 logger.info(f"等待 {wait_time} 秒后重试...")
                 time.sleep(wait_time)
 
-    def generate_image(self, prompt, output_path):
+    def generate_image(self, prompt, output_path, aspect_ratio="16:9", image_size="2K"):
         """使用Gemini生成图片"""
         logger.info(f"开始生成图片: {output_path}")
         logger.debug(f"提示词: {prompt[:100]}...")
+        logger.info(f"图片配置: 比例={aspect_ratio}, 尺寸={image_size}")
 
         def api_call():
             try:
-                # 使用Gemini 2.0的图片生成功能
-                model = genai.GenerativeModel(self.model_name)
+                logger.info(f"调用Gemini {self.model_name} 生成图片")
 
-                logger.info(f"调用Gemini API生成图片")
-
-                # 构建完整的提示词，要求生成图片
-                full_prompt = f"""请生成一张PPT页面图片。要求：
-{prompt}
-
-请直接生成图片，不要返回文字描述。"""
-
-                response = model.generate_content(full_prompt)
+                # 使用新的Gemini API调用图片生成
+                response = self.client.models.generate_content(
+                    model=self.model_name,
+                    contents=[prompt],
+                    config=types.GenerateContentConfig(
+                        response_modalities=['IMAGE'],  # 只生成图片
+                        image_config=types.ImageConfig(
+                            aspect_ratio=aspect_ratio,  # 16:9适合PPT
+                            image_size=image_size  # 2K分辨率
+                        ),
+                    )
+                )
                 logger.info("Gemini API调用成功")
 
-                # 检查响应中是否有图片
-                if hasattr(response, 'parts'):
-                    for part in response.parts:
-                        if hasattr(part, 'inline_data'):
-                            # 获取图片数据
-                            image_data = part.inline_data.data
-                            logger.info("从响应中提取图片数据")
+                # 提取并保存图片
+                for part in response.parts:
+                    if part.inline_data is not None:
+                        logger.info("从响应中提取图片数据")
+                        # 使用as_image()方法获取PIL Image对象
+                        image = part.as_image()
+                        # 保存图片
+                        image.save(output_path)
+                        logger.info(f"图片已保存: {output_path}")
+                        return output_path
 
-                            # 保存图片
-                            with open(output_path, 'wb') as f:
-                                f.write(image_data)
-                            logger.info(f"图片已保存: {output_path}")
-                            return output_path
-
-                # 如果没有图片，创建一个占位图片
+                # 如果没有图片，创建占位图片
                 logger.warning("Gemini未返回图片，创建占位图片")
                 self._create_placeholder_image(output_path, prompt)
                 return output_path

@@ -21,7 +21,7 @@
 - **文件存储**：本地文件系统
 - **AI模型**：
   - Gemini 1.5 Pro（大纲生成）
-  - Gemini 2.0 Flash（图片生成）
+  - Gemini 3 Pro Image Preview / Nano Banana Pro（图片生成，支持2K/4K分辨率）
 
 ## 项目结构
 
@@ -93,7 +93,7 @@ cp .env.example .env
 GEMINI_API_KEY=your_gemini_api_key_here
 GEMINI_MODEL=gemini-1.5-pro
 
-# 注意：图片生成也使用Gemini API（gemini-2.0-flash-exp模型）
+# 注意：图片生成使用 gemini-3-pro-image-preview 模型（Nano Banana Pro）
 # 只需要配置一个Gemini API密钥即可
 
 # Flask应用配置
@@ -175,13 +175,19 @@ python app.py
 项目使用Google Gemini API进行AI功能：
 
 - **大纲生成**：使用 `gemini-1.5-pro` 模型
-- **图片生成**：使用 `gemini-2.0-flash-exp` 模型
+- **图片生成**：使用 `gemini-3-pro-image-preview` 模型（Nano Banana Pro）
+  - 支持16:9宽屏比例，适合PPT
+  - 支持2K/4K高分辨率
+  - 自动添加SynthID水印
 
 如果Gemini图片生成功能不可用，系统会自动创建占位图片，确保流程可以正常测试。
 
 配置方法：
-1. 获取Gemini API密钥：https://makersuite.google.com/app/apikey
+1. 获取Gemini API密钥：https://aistudio.google.com/apikey
 2. 在 `.env` 文件中配置 `GEMINI_API_KEY`
+3. 确保API密钥有图片生成权限
+
+参考文档：https://ai.google.dev/gemini-api/docs/image-generation
 
 ## 开发说明
 
