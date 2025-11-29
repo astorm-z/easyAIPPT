@@ -20,8 +20,8 @@
 - **数据库**：SQLite
 - **文件存储**：本地文件系统
 - **AI模型**：
-  - Gemini 3 Pro（大纲生成）
-  - Nano Banana Pro（图片生成）
+  - Gemini 1.5 Pro（大纲生成）
+  - Gemini 2.0 Flash（图片生成）
 
 ## 项目结构
 
@@ -93,9 +93,8 @@ cp .env.example .env
 GEMINI_API_KEY=your_gemini_api_key_here
 GEMINI_MODEL=gemini-1.5-pro
 
-# Nano Banana Pro API配置
-BANANA_API_KEY=your_banana_api_key_here
-BANANA_MODEL_KEY=nano-banana-pro
+# 注意：图片生成也使用Gemini API（gemini-2.0-flash-exp模型）
+# 只需要配置一个Gemini API密钥即可
 
 # Flask应用配置
 FLASK_SECRET_KEY=your_secret_key_here
@@ -171,16 +170,18 @@ python app.py
 
 ## API说明
 
-### Banana API集成
+### Gemini API集成
 
-当前代码中的Banana API调用是示例实现，需要根据实际的Nano Banana Pro API文档进行调整：
+项目使用Google Gemini API进行AI功能：
 
-- API端点URL
-- 请求参数格式
-- 响应数据格式
-- 图片获取方式
+- **大纲生成**：使用 `gemini-1.5-pro` 模型
+- **图片生成**：使用 `gemini-2.0-flash-exp` 模型
 
-请参考 `services/banana_service.py` 文件并根据实际API文档修改。
+如果Gemini图片生成功能不可用，系统会自动创建占位图片，确保流程可以正常测试。
+
+配置方法：
+1. 获取Gemini API密钥：https://makersuite.google.com/app/apikey
+2. 在 `.env` 文件中配置 `GEMINI_API_KEY`
 
 ## 开发说明
 

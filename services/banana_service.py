@@ -1,22 +1,24 @@
-"""Nano Banana Pro API调用服务"""
+"""Gemini图片生成API调用服务"""
 import os
 import time
 import logging
-import requests
+import google.generativeai as genai
+from PIL import Image
+import io
 
 logger = logging.getLogger(__name__)
 
 
 class BananaService:
-    """Banana服务"""
+    """Gemini图片生成服务（原Banana服务）"""
 
     def __init__(self, config):
         self.config = config
-        self.api_key = config.BANANA_API_KEY
-        self.model_key = config.BANANA_MODEL_KEY
-        # 这里需要根据实际的Banana API文档调整
-        self.api_url = "https://api.banana.dev/v1/generate"  # 示例URL
-        logger.info(f"BananaService初始化完成 - API URL: {self.api_url}")
+        # 使用Gemini API密钥
+        genai.configure(api_key=config.GEMINI_API_KEY)
+        # 使用Gemini的图片生成模型
+        self.model_name = 'gemini-2.0-flash-exp'  # Gemini 2.0支持图片生成
+        logger.info(f"BananaService初始化完成 - 使用Gemini模型: {self.model_name}")
 
     def load_prompt(self, prompt_file):
         """加载提示词文件"""
@@ -44,58 +46,90 @@ class BananaService:
                 time.sleep(wait_time)
 
     def generate_image(self, prompt, output_path):
-        """生成图片"""
+        """使用Gemini生成图片"""
         logger.info(f"开始生成图片: {output_path}")
         logger.debug(f"提示词: {prompt[:100]}...")
 
         def api_call():
-            # 这里需要根据实际的Banana API调整请求格式
-            headers = {
-                'Authorization': f'Bearer {self.api_key}',
-                'Content-Type': 'application/json'
-            }
+            try:
+                # 使用Gemini 2.0的图片生成功能
+                model = genai.GenerativeModel(self.model_name)
 
-            payload = {
-                'model': self.model_key,
-                'prompt': prompt,
-                'width': 1920,
-                'height': 1080
-            }
+                logger.info(f"调用Gemini API生成图片")
 
-            logger.info(f"发送API请求到: {self.api_url}")
-            response = requests.post(self.api_url, headers=headers, json=payload, timeout=120)
-            response.raise_for_status()
-            logger.info("API请求成功")
+                # 构建完整的提示词，要求生成图片
+                full_prompt = f"""请生成一张PPT页面图片。要求：
+{prompt}
 
-            # 保存图片
-            # 这里需要根据实际API响应格式调整
-            result = response.json()
-            logger.debug(f"API响应: {result}")
+请直接生成图片，不要返回文字描述。"""
 
-            # 假设API返回图片URL或base64数据
-            if 'image_url' in result:
-                # 下载图片
-                logger.info(f"从URL下载图片: {result['image_url']}")
-                img_response = requests.get(result['image_url'], timeout=60)
-                img_response.raise_for_status()
-                with open(output_path, 'wb') as f:
-                    f.write(img_response.content)
-                logger.info(f"图片已保存: {output_path}")
-            elif 'image_data' in result:
-                # 保存base64数据
-                logger.info("保存base64图片数据")
-                import base64
-                img_data = base64.b64decode(result['image_data'])
-                with open(output_path, 'wb') as f:
-                    f.write(img_data)
-                logger.info(f"图片已保存: {output_path}")
-            else:
-                logger.error("API响应中没有图片数据")
-                raise Exception('API响应中没有图片数据')
+                response = model.generate_content(full_prompt)
+                logger.info("Gemini API调用成功")
 
-            return output_path
+                # 检查响应中是否有图片
+                if hasattr(response, 'parts'):
+                    for part in response.parts:
+                        if hasattr(part, 'inline_data'):
+                            # 获取图片数据
+                            image_data = part.inline_data.data
+                            logger.info("从响应中提取图片数据")
+
+                            # 保存图片
+                            with open(output_path, 'wb') as f:
+                                f.write(image_data)
+                            logger.info(f"图片已保存: {output_path}")
+                            return output_path
+
+                # 如果没有图片，创建一个占位图片
+                logger.warning("Gemini未返回图片，创建占位图片")
+                self._create_placeholder_image(output_path, prompt)
+                return output_path
+
+            except Exception as e:
+                logger.error(f"Gemini图片生成失败: {str(e)}")
+                # 创建占位图片
+                logger.info("创建占位图片")
+                self._create_placeholder_image(output_path, prompt)
+                return output_path
 
         return self.retry_api_call(api_call)
+
+    def _create_placeholder_image(self, output_path, prompt):
+        """创建占位图片（当API不可用时）"""
+        from PIL import Image, ImageDraw, ImageFont
+
+        # 创建1920x1080的白色背景图片
+        img = Image.new('RGB', (1920, 1080), color='white')
+        draw = ImageDraw.Draw(img)
+
+        # 绘制边框
+        draw.rectangle([(50, 50), (1870, 1030)], outline='#E0E0E0', width=2)
+
+        # 添加文字说明
+        try:
+            # 尝试使用系统字体
+            font_title = ImageFont.truetype("arial.ttf", 48)
+            font_text = ImageFont.truetype("arial.ttf", 24)
+        except:
+            # 如果没有字体文件，使用默认字体
+            font_title = ImageFont.load_default()
+            font_text = ImageFont.load_default()
+
+        # 绘制标题
+        title = "PPT页面占位图"
+        draw.text((960, 400), title, fill='#333333', font=font_title, anchor='mm')
+
+        # 绘制提示词（截取前100字符）
+        prompt_text = prompt[:100] + "..." if len(prompt) > 100 else prompt
+        draw.text((960, 500), prompt_text, fill='#666666', font=font_text, anchor='mm')
+
+        # 绘制说明
+        note = "（这是占位图片，请配置正确的Gemini API以生成真实图片）"
+        draw.text((960, 600), note, fill='#999999', font=font_text, anchor='mm')
+
+        # 保存图片
+        img.save(output_path)
+        logger.info(f"占位图片已创建: {output_path}")
 
     def generate_style_template(self, style_description, output_path):
         """生成样式模板"""
