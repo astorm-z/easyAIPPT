@@ -67,6 +67,33 @@ def init_routes(db_manager: DBManager, gemini_service: GeminiService):
             traceback.print_exc()
             return jsonify({'success': False, 'error': str(e)}), 500
 
+    @outline_bp.route('/api/ppt/<int:project_id>/outline/confirm', methods=['POST'])
+    def confirm_outline(project_id):
+        """确认大纲（不重新生成，仅更新状态）"""
+        try:
+            print(f"[确认大纲] 开始确认项目 {project_id} 的大纲")
+            project = db_manager.get_ppt_project(project_id)
+            if not project:
+                print(f"[确认大纲] 项目 {project_id} 不存在")
+                return jsonify({'success': False, 'error': 'PPT项目不存在'}), 404
+
+            # 检查是否已有大纲
+            pages = db_manager.get_outline_pages(project_id)
+            if not pages:
+                print(f"[确认大纲] 项目 {project_id} 还没有生成大纲")
+                return jsonify({'success': False, 'error': '请先生成大纲'}), 400
+
+            # 更新项目状态为已确认大纲
+            db_manager.update_ppt_project_status(project_id, 'outline_confirmed')
+            print(f"[确认大纲] 项目 {project_id} 状态已更新为 outline_confirmed")
+
+            return jsonify({'success': True, 'message': '大纲已确认'})
+        except Exception as e:
+            print(f"[确认大纲] 发生错误: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'success': False, 'error': str(e)}), 500
+
     @outline_bp.route('/api/ppt/<int:project_id>/outline', methods=['GET'])
     def get_outline(project_id):
         """获取大纲"""

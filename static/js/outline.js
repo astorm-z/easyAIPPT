@@ -208,8 +208,8 @@ async function confirmOutline() {
     if (!confirmed) return;
 
     try {
-        // 更新项目状态
-        await apiRequest(`/api/ppt/${projectId}/outline/generate`, {
+        // 调用确认大纲接口（不会重新生成，只更新状态）
+        await apiRequest(`/api/ppt/${projectId}/outline/confirm`, {
             method: 'POST'
         });
         showSuccess('大纲已确认');
