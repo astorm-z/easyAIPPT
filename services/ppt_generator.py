@@ -236,21 +236,31 @@ class PPTGenerator:
                     # 更新页面状态为生成中
                     self.db_manager.update_ppt_page_status(project_id, page['page_number'], 'generating')
 
-                    # 使用自定义提示词或默认提示词
+                    # 输出路径
+                    output_path = os.path.join(output_dir, f'page_{page["page_number"]:03d}.png')
+
+                    # 使用自定义提示词或默认方式生成
                     if page['page_number'] in custom_prompts_dict:
+                        # 使用自定义提示词（用户已经编辑过的完整提示词）
                         prompt = custom_prompts_dict[page['page_number']]
                         logger.info(f"使用自定义提示词生成第 {page['page_number']} 页")
+                        # 自定义提示词情况下，也需要传入样式模板图片
+                        style_ref = selected_style['image_path'] if selected_style else ''
+                        # 注意：自定义提示词时，直接用提示词生成，但仍传入样式图片作为参考
+                        self.banana_service.generate_image_with_reference(prompt, style_ref, output_path) if style_ref else self.banana_service.generate_image(prompt, output_path)
                     else:
-                        # 构建默认提示词
-                        prompt = self._build_page_prompt(page, selected_style)
+                        # 构建默认页面内容
+                        page_content = f"标题: {page['title']}\n内容: {page['content']}"
+                        if page.get('image_prompt'):
+                            page_content += f"\n图片提示: {page['image_prompt']}"
 
-                    # 生成图片
-                    image_path = self._generate_page_image(
-                        project_id,
-                        page['page_number'],
-                        prompt,
-                        output_dir
-                    )
+                        # 获取样式模板图片路径
+                        style_ref = selected_style['image_path'] if selected_style else ''
+
+                        # 调用 banana_service 生成图片（会将样式模板图作为参考图片传入API）
+                        self.banana_service.generate_ppt_page(page_content, style_ref, output_path)
+
+                    image_path = output_path
 
                     # 更新页面状态和路径
                     self.db_manager.update_ppt_page(

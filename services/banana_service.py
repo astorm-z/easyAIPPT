@@ -153,9 +153,16 @@ class BananaService:
 
         # 加载提示词模板
         prompt_template = self.load_prompt('page_generation.txt')
+
+        # 根据是否有样式模板，构建不同的样式参考说明
+        if style_reference and os.path.exists(style_reference):
+            style_desc = "我已提供一张样式模板图片作为参考，请严格参考该图片的配色方案、布局风格、字体设计和视觉元素，生成与之风格一致的PPT页面"
+        else:
+            style_desc = "使用现代简约的设计风格"
+
         full_prompt = prompt_template.format(
             page_content=page_content,
-            style_reference="参考提供的样式模板图片" if style_reference else "无样式参考"
+            style_reference=style_desc
         )
 
         # 如果有样式模板，将其作为参考图片传入
