@@ -15,8 +15,8 @@ class BananaService:
     def __init__(self, config):
         self.config = config
 
-        # 初始化Gemini客户端，支持自定义 API URL
-        client_kwargs = {'api_key': config.GEMINI_API_KEY}
+        # 初始化Gemini客户端，支持自定义 API URL 和独立的 API Key
+        client_kwargs = {'api_key': config.BANANA_API_KEY}
 
         # 如果配置了自定义 Banana API URL，则使用 HttpOptions 设置
         if config.BANANA_API_BASE_URL and config.BANANA_API_BASE_URL != 'https://generativelanguage.googleapis.com':

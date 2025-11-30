@@ -104,6 +104,9 @@ GEMINI_API_BASE_URL=https://generativelanguage.googleapis.com
 
 # Banana (图片生成) API配置
 # 注意：图片生成也使用Gemini API
+# Banana API Key（可选，如不配置则使用GEMINI_API_KEY）
+# 可以独立配置图片生成的API Key，与文本生成分离
+BANANA_API_KEY=your_banana_api_key_here
 # Banana API Base URL（可选，默认使用Google官方API）
 # 可以独立配置图片生成API的URL，与文本生成API分离
 BANANA_API_BASE_URL=https://generativelanguage.googleapis.com
@@ -123,9 +126,13 @@ GENERATED_FOLDER=./generated
 MAX_UPLOAD_SIZE=50
 ```
 
-#### 自定义 API URL 和模型说明
+#### 自定义 API 配置说明
 
 如果你需要使用代理服务或自建的 Gemini API 服务，可以通过以下环境变量配置：
+
+**API Key 配置：**
+- **GEMINI_API_KEY**：文本生成（大纲生成）使用的 API Key
+- **BANANA_API_KEY**：图片生成使用的 API Key（可选，不配置则使用 GEMINI_API_KEY）
 
 **API 地址配置：**
 - **GEMINI_API_BASE_URL**：用于大纲生成的 Gemini API 地址
@@ -137,11 +144,18 @@ MAX_UPLOAD_SIZE=50
 
 配置示例：
 ```bash
-# 使用不同的代理服务
+# 场景1：使用相同的 API Key 和不同的代理
+GEMINI_API_KEY=your_api_key
 GEMINI_API_BASE_URL=https://text-proxy.com
 BANANA_API_BASE_URL=https://image-proxy.com
 
-# 使用不同的模型
+# 场景2：使用不同的 API Key 和代理（完全分离）
+GEMINI_API_KEY=your_text_api_key
+GEMINI_API_BASE_URL=https://text-proxy.com
+BANANA_API_KEY=your_image_api_key
+BANANA_API_BASE_URL=https://image-proxy.com
+
+# 场景3：使用不同的模型
 GEMINI_MODEL=gemini-1.5-flash
 BANANA_MODEL=gemini-3-pro-image-preview
 ```

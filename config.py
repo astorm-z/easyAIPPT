@@ -20,6 +20,7 @@ class Config:
 
     # Banana (图片生成) API配置
     # 图片生成也使用Gemini API（gemini-3-pro-image-preview模型）
+    BANANA_API_KEY = os.getenv('BANANA_API_KEY') or os.getenv('GEMINI_API_KEY')  # 优先使用独立key，否则使用Gemini key
     BANANA_API_BASE_URL = os.getenv('BANANA_API_BASE_URL', 'https://generativelanguage.googleapis.com')
     BANANA_MODEL = os.getenv('BANANA_MODEL', 'gemini-3-pro-image-preview')
 
