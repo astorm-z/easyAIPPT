@@ -4,7 +4,8 @@
 
 ## 功能特性
 
-- **工作空间管理**：创建多个独立的工作空间，互不干扰
+- **登录认证**：支持密码保护，可选功能，session 有效期 7 天
+- **工作空间管理**：创建多个独立的工作空间，支持删除，互不干扰
 - **知识库构建**：支持上传txt、pdf、doc、docx文档和常见图片格式
 - **智能大纲生成**：基于Gemini 1.5 Pro模型，根据知识库和用户需求自动生成PPT大纲
 - **大纲编辑**：支持手动编辑、单页重新生成或全部重新生成
@@ -45,6 +46,7 @@ easyAIPPT/
 │   ├── banana_service.py      # Banana API调用
 │   └── ppt_generator.py       # PPT生成流程控制
 ├── routes/                     # 路由模块
+│   ├── auth.py                # 认证路由
 │   ├── workspace.py           # 工作空间路由
 │   ├── knowledge.py           # 知识库路由
 │   ├── outline.py             # 大纲路由
@@ -113,9 +115,21 @@ BANANA_API_BASE_URL=https://generativelanguage.googleapis.com
 # 图片生成模型（可选，默认使用gemini-3-pro-image-preview）
 BANANA_MODEL=gemini-3-pro-image-preview
 
+# 图片生成分辨率配置
+# 样式模板图片分辨率（可选，默认2K）
+STYLE_TEMPLATE_IMAGE_SIZE=2K
+# PPT页面图片分辨率（可选，默认4K）
+PPT_PAGE_IMAGE_SIZE=4K
+# 图片宽高比（可选，默认16:9，适合PPT）
+IMAGE_ASPECT_RATIO=16:9
+
 # Flask应用配置
 FLASK_SECRET_KEY=your_secret_key_here
 FLASK_DEBUG=True
+
+# 登录认证配置
+# 设置访问密码，留空则不需要登录
+LOGIN_PASSWORD=
 
 # 数据库配置
 DATABASE_PATH=./database/easyaippt.db
@@ -142,6 +156,14 @@ MAX_UPLOAD_SIZE=50
 - **GEMINI_MODEL**：大纲生成使用的模型（默认：gemini-1.5-pro）
 - **BANANA_MODEL**：图片生成使用的模型（默认：gemini-3-pro-image-preview）
 
+**图片分辨率配置：**
+- **STYLE_TEMPLATE_IMAGE_SIZE**：样式模板图片分辨率（默认：2K）
+- **PPT_PAGE_IMAGE_SIZE**：PPT页面图片分辨率（默认：4K）
+- **IMAGE_ASPECT_RATIO**：图片宽高比（默认：16:9）
+
+支持的分辨率选项：`2K`、`4K`
+支持的宽高比选项：`16:9`、`9:16`、`4:3`、`3:4`、`1:1`
+
 配置示例：
 ```bash
 # 场景1：使用相同的 API Key 和不同的代理
@@ -158,6 +180,11 @@ BANANA_API_BASE_URL=https://image-proxy.com
 # 场景3：使用不同的模型
 GEMINI_MODEL=gemini-1.5-flash
 BANANA_MODEL=gemini-3-pro-image-preview
+
+# 场景4：自定义图片分辨率（样式模板使用2K，PPT页面使用4K）
+STYLE_TEMPLATE_IMAGE_SIZE=2K
+PPT_PAGE_IMAGE_SIZE=4K
+IMAGE_ASPECT_RATIO=16:9
 ```
 
 如果不配置这些变量，系统将使用默认值。
@@ -172,32 +199,37 @@ python app.py
 
 ## 使用流程
 
-1. **创建工作空间**
+1. **登录系统**（如果设置了密码）
+   - 访问应用，自动跳转到登录页
+   - 输入在 `.env` 中配置的密码
+   - 登录成功后 session 有效期 7 天
+
+2. **创建工作空间**
    - 访问首页，点击"创建工作空间"
    - 输入工作空间名称和描述
 
-2. **构建知识库**
+3. **构建知识库**
    - 进入工作空间
    - 上传txt、pdf、doc、docx文档或图片
    - 系统会自动提取文本内容
 
-3. **创建PPT项目**
+4. **创建PPT项目**
    - 点击"创建PPT"
    - 输入PPT标题、内容描述和预期页数
    - 系统会自动跳转到大纲编辑页
 
-4. **编辑大纲**
+5. **编辑大纲**
    - 查看AI生成的PPT大纲
    - 可以手动编辑每一页
    - 可以重新生成单页或全部大纲
    - 确认大纲后进入下一步
 
-5. **选择样式**
+6. **选择样式**
    - 点击"生成样式模板"
    - 从3个样式模板中选择一个
    - 点击"开始生成"
 
-6. **生成PPT**
+7. **生成PPT**
    - 系统会逐页生成PPT图片
    - 实时显示生成进度
    - 可以重新生成任意一页
@@ -212,6 +244,7 @@ python app.py
 5. **提示词调整**：可以根据需要修改prompts目录下的提示词文件
 6. **任务恢复**：服务器重启后会自动恢复未完成的生成任务，也可手动点击"继续生成"按钮
 7. **日志查看**：所有操作都有详细日志，便于排查问题
+8. **分辨率配置**：样式模板默认2K，PPT页面默认4K，可在.env中自定义分辨率和宽高比
 
 ## 提示词说明
 
@@ -231,9 +264,10 @@ python app.py
 
 - **大纲生成**：使用 `gemini-1.5-pro` 模型
 - **图片生成**：使用 `gemini-3-pro-image-preview` 模型（Nano Banana Pro）
-  - 支持16:9宽屏比例，适合PPT
-  - 支持2K/4K高分辨率
+  - 支持自定义宽高比（默认16:9，适合PPT）
+  - 支持2K/4K高分辨率（样式模板默认2K，PPT页面默认4K）
   - 自动添加SynthID水印
+  - 可通过环境变量自定义分辨率配置
 
 如果Gemini图片生成功能不可用，系统会自动创建占位图片，确保流程可以正常测试。
 
@@ -306,6 +340,8 @@ python app.py
 - ✅ 基于Gemini 1.5 Pro的智能大纲生成
 - ✅ 基于Gemini 3 Pro Image Preview的图片生成
 - ✅ 样式模板选择和风格一致性保证
+- ✅ 登录认证功能（可选，支持密码保护）
+- ✅ 工作空间删除功能
 
 **重要改进**
 - ✅ 实时进度显示（进度条+状态文字）
@@ -315,12 +351,15 @@ python app.py
 - ✅ 详细的日志系统
 - ✅ 图片访问路径修复
 - ✅ API重试机制（最多10次）
+- ✅ Session 持久化（7天有效期）
+- ✅ 登录页面样式优化
 
 **技术优化**
 - ✅ 使用官方google-genai SDK
 - ✅ 异步生成任务
 - ✅ 状态持久化到数据库
 - ✅ 智能跳过已完成页面
+- ✅ 登录中间件和权限验证
 
 ## 许可证
 

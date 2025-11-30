@@ -27,6 +27,11 @@ class Config:
     BANANA_API_BASE_URL = os.getenv('BANANA_API_BASE_URL', 'https://generativelanguage.googleapis.com')
     BANANA_MODEL = os.getenv('BANANA_MODEL', 'gemini-3-pro-image-preview')
 
+    # 图片生成分辨率配置
+    STYLE_TEMPLATE_IMAGE_SIZE = os.getenv('STYLE_TEMPLATE_IMAGE_SIZE', '2K')  # 样式模板图片分辨率
+    PPT_PAGE_IMAGE_SIZE = os.getenv('PPT_PAGE_IMAGE_SIZE', '4K')  # PPT页面图片分辨率
+    IMAGE_ASPECT_RATIO = os.getenv('IMAGE_ASPECT_RATIO', '16:9')  # 图片宽高比
+
     # 数据库配置
     DATABASE_PATH = os.getenv('DATABASE_PATH', './database/easyaippt.db')
 

@@ -246,8 +246,14 @@ class PPTGenerator:
                         logger.info(f"使用自定义提示词生成第 {page['page_number']} 页")
                         # 自定义提示词情况下，也需要传入样式模板图片
                         style_ref = selected_style['image_path'] if selected_style else ''
+                        # 使用配置的PPT页面分辨率
+                        aspect_ratio = self.config.IMAGE_ASPECT_RATIO
+                        image_size = self.config.PPT_PAGE_IMAGE_SIZE
                         # 注意：自定义提示词时，直接用提示词生成，但仍传入样式图片作为参考
-                        self.banana_service.generate_image_with_reference(prompt, style_ref, output_path) if style_ref else self.banana_service.generate_image(prompt, output_path)
+                        if style_ref:
+                            self.banana_service.generate_image_with_reference(prompt, style_ref, output_path, aspect_ratio=aspect_ratio, image_size=image_size)
+                        else:
+                            self.banana_service.generate_image(prompt, output_path, aspect_ratio=aspect_ratio, image_size=image_size)
                     else:
                         # 构建默认页面内容
                         page_content = f"标题: {page['title']}\n内容: {page['content']}"

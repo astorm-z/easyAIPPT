@@ -136,7 +136,10 @@ class BananaService:
         """生成样式模板"""
         prompt_template = self.load_prompt('style_template.txt')
         full_prompt = prompt_template.format(style_description=style_description)
-        return self.generate_image(full_prompt, output_path)
+        # 使用配置的样式模板分辨率
+        aspect_ratio = self.config.IMAGE_ASPECT_RATIO
+        image_size = self.config.STYLE_TEMPLATE_IMAGE_SIZE
+        return self.generate_image(full_prompt, output_path, aspect_ratio=aspect_ratio, image_size=image_size)
 
     def generate_ppt_page(self, page_content, style_reference, output_path):
         """生成PPT页面（基于样式模板）"""
@@ -156,13 +159,17 @@ class BananaService:
             style_reference=style_desc
         )
 
+        # 使用配置的PPT页面分辨率
+        aspect_ratio = self.config.IMAGE_ASPECT_RATIO
+        image_size = self.config.PPT_PAGE_IMAGE_SIZE
+
         # 如果有样式模板，将其作为参考图片传入
         if style_reference and os.path.exists(style_reference):
             logger.info(f"使用样式模板图片: {style_reference}")
-            return self.generate_image_with_reference(full_prompt, style_reference, output_path)
+            return self.generate_image_with_reference(full_prompt, style_reference, output_path, aspect_ratio=aspect_ratio, image_size=image_size)
         else:
             logger.warning("没有样式模板参考，直接生成")
-            return self.generate_image(full_prompt, output_path)
+            return self.generate_image(full_prompt, output_path, aspect_ratio=aspect_ratio, image_size=image_size)
 
     def generate_image_with_reference(self, prompt, reference_image_path, output_path, aspect_ratio="16:9", image_size="2K"):
         """使用参考图片生成新图片（图片编辑功能）"""
