@@ -132,6 +132,7 @@ function hideStyleProgress() {
 async function pollStyleProgress() {
     const maxAttempts = 300; // 最多轮询5分钟（每秒一次）
     let attempts = 0;
+    let lastLoadedCount = 0; // 记录上次加载的数量
 
     const poll = async () => {
         try {
@@ -147,6 +148,12 @@ async function pollStyleProgress() {
             }
             if (progressText) {
                 progressText.textContent = status.message || `正在生成 ${status.current}/${status.total}`;
+            }
+
+            // 实时加载已生成的样式（当有新样式生成时）
+            if (status.current > lastLoadedCount && status.status === 'generating') {
+                await loadStyles(projectId);
+                lastLoadedCount = status.current;
             }
 
             // 检查状态
