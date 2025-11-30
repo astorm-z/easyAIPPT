@@ -134,8 +134,13 @@ async function pollStyleProgress() {
                 await loadStyles(projectId);
                 return;
             } else if (status.status === 'failed') {
-                showError('样式模板生成失败: ' + status.message);
+                showError(`样式模板生成失败: ${status.message}\n\n请点击"生成样式模板"按钮重新生成`);
                 hideStyleProgress();
+                // 清空样式网格，避免显示旧的样式
+                const grid = document.getElementById('styles-grid');
+                if (grid) {
+                    grid.innerHTML = '<div class="alert alert-warning"><strong>生成失败</strong><p class="mt-sm">样式模板生成失败，请点击上方"生成样式模板"按钮重试</p></div>';
+                }
                 return;
             }
 

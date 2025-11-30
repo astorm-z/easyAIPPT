@@ -92,14 +92,8 @@ class BananaService:
             # 如果没有图片，抛出异常触发重试
             raise Exception("Gemini未返回图片数据")
 
-        try:
-            # 调用重试机制
-            return self.retry_api_call(api_call)
-        except Exception as e:
-            # 只有在所有重试都失败后，才创建占位图片
-            logger.error(f"所有重试失败，创建占位图片: {str(e)}")
-            self._create_placeholder_image(output_path, prompt)
-            return output_path
+        # 调用重试机制，失败时抛出异常
+        return self.retry_api_call(api_call)
 
     def _create_placeholder_image(self, output_path, prompt):
         """创建占位图片（当API不可用时）"""
@@ -210,11 +204,5 @@ class BananaService:
             # 如果没有图片，抛出异常触发重试
             raise Exception("Gemini未返回图片数据")
 
-        try:
-            # 调用重试机制
-            return self.retry_api_call(api_call)
-        except Exception as e:
-            # 只有在所有重试都失败后，才创建占位图片
-            logger.error(f"所有重试失败，创建占位图片: {str(e)}")
-            self._create_placeholder_image(output_path, prompt)
-            return output_path
+        # 调用重试机制，失败时抛出异常
+        return self.retry_api_call(api_call)
