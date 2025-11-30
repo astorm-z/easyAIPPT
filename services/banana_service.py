@@ -62,47 +62,44 @@ class BananaService:
         logger.info(f"图片配置: 比例={aspect_ratio}, 尺寸={image_size}")
 
         def api_call():
-            try:
-                logger.info(f"调用Gemini {self.model_name} 生成图片")
+            logger.info(f"调用Gemini {self.model_name} 生成图片")
 
-                # 使用新的Gemini API调用图片生成
-                response = self.client.models.generate_content(
-                    model=self.model_name,
-                    contents=[prompt],
-                    config=types.GenerateContentConfig(
-                        response_modalities=['IMAGE'],  # 只生成图片
-                        image_config=types.ImageConfig(
-                            aspect_ratio=aspect_ratio,  # 16:9适合PPT
-                            image_size=image_size  # 2K分辨率
-                        ),
-                    )
+            # 使用新的Gemini API调用图片生成
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=[prompt],
+                config=types.GenerateContentConfig(
+                    response_modalities=['IMAGE'],  # 只生成图片
+                    image_config=types.ImageConfig(
+                        aspect_ratio=aspect_ratio,  # 16:9适合PPT
+                        image_size=image_size  # 2K分辨率
+                    ),
                 )
-                logger.info("Gemini API调用成功")
+            )
+            logger.info("Gemini API调用成功")
 
-                # 提取并保存图片
-                for part in response.parts:
-                    if part.inline_data is not None:
-                        logger.info("从响应中提取图片数据")
-                        # 使用as_image()方法获取PIL Image对象
-                        image = part.as_image()
-                        # 保存图片
-                        image.save(output_path)
-                        logger.info(f"图片已保存: {output_path}")
-                        return output_path
+            # 提取并保存图片
+            for part in response.parts:
+                if part.inline_data is not None:
+                    logger.info("从响应中提取图片数据")
+                    # 使用as_image()方法获取PIL Image对象
+                    image = part.as_image()
+                    # 保存图片
+                    image.save(output_path)
+                    logger.info(f"图片已保存: {output_path}")
+                    return output_path
 
-                # 如果没有图片，创建占位图片
-                logger.warning("Gemini未返回图片，创建占位图片")
-                self._create_placeholder_image(output_path, prompt)
-                return output_path
+            # 如果没有图片，抛出异常触发重试
+            raise Exception("Gemini未返回图片数据")
 
-            except Exception as e:
-                logger.error(f"Gemini图片生成失败: {str(e)}")
-                # 创建占位图片
-                logger.info("创建占位图片")
-                self._create_placeholder_image(output_path, prompt)
-                return output_path
-
-        return self.retry_api_call(api_call)
+        try:
+            # 调用重试机制
+            return self.retry_api_call(api_call)
+        except Exception as e:
+            # 只有在所有重试都失败后，才创建占位图片
+            logger.error(f"所有重试失败，创建占位图片: {str(e)}")
+            self._create_placeholder_image(output_path, prompt)
+            return output_path
 
     def _create_placeholder_image(self, output_path, prompt):
         """创建占位图片（当API不可用时）"""
@@ -181,45 +178,43 @@ class BananaService:
         logger.info(f"图片配置: 比例={aspect_ratio}, 尺寸={image_size}")
 
         def api_call():
-            try:
-                logger.info(f"调用Gemini {self.model_name} 生成图片（带参考）")
+            logger.info(f"调用Gemini {self.model_name} 生成图片（带参考）")
 
-                # 加载参考图片
-                reference_image = Image.open(reference_image_path)
-                logger.info(f"参考图片已加载: {reference_image.size}")
+            # 加载参考图片
+            reference_image = Image.open(reference_image_path)
+            logger.info(f"参考图片已加载: {reference_image.size}")
 
-                # 使用Gemini API调用图片生成（文字+图片转图片）
-                response = self.client.models.generate_content(
-                    model=self.model_name,
-                    contents=[prompt, reference_image],  # 同时传入文字和图片
-                    config=types.GenerateContentConfig(
-                        response_modalities=['IMAGE'],
-                        image_config=types.ImageConfig(
-                            aspect_ratio=aspect_ratio,
-                            image_size=image_size
-                        ),
-                    )
+            # 使用Gemini API调用图片生成（文字+图片转图片）
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=[prompt, reference_image],  # 同时传入文字和图片
+                config=types.GenerateContentConfig(
+                    response_modalities=['IMAGE'],
+                    image_config=types.ImageConfig(
+                        aspect_ratio=aspect_ratio,
+                        image_size=image_size
+                    ),
                 )
-                logger.info("Gemini API调用成功")
+            )
+            logger.info("Gemini API调用成功")
 
-                # 提取并保存图片
-                for part in response.parts:
-                    if part.inline_data is not None:
-                        logger.info("从响应中提取图片数据")
-                        image = part.as_image()
-                        image.save(output_path)
-                        logger.info(f"图片已保存: {output_path}")
-                        return output_path
+            # 提取并保存图片
+            for part in response.parts:
+                if part.inline_data is not None:
+                    logger.info("从响应中提取图片数据")
+                    image = part.as_image()
+                    image.save(output_path)
+                    logger.info(f"图片已保存: {output_path}")
+                    return output_path
 
-                # 如果没有图片，创建占位图片
-                logger.warning("Gemini未返回图片，创建占位图片")
-                self._create_placeholder_image(output_path, prompt)
-                return output_path
+            # 如果没有图片，抛出异常触发重试
+            raise Exception("Gemini未返回图片数据")
 
-            except Exception as e:
-                logger.error(f"Gemini图片生成失败: {str(e)}")
-                logger.info("创建占位图片")
-                self._create_placeholder_image(output_path, prompt)
-                return output_path
-
-        return self.retry_api_call(api_call)
+        try:
+            # 调用重试机制
+            return self.retry_api_call(api_call)
+        except Exception as e:
+            # 只有在所有重试都失败后，才创建占位图片
+            logger.error(f"所有重试失败，创建占位图片: {str(e)}")
+            self._create_placeholder_image(output_path, prompt)
+            return output_path
