@@ -2,9 +2,11 @@
 import os
 import time
 import logging
-from google import genai
-from google.genai import types
+import requests
+import base64
+import json
 from PIL import Image
+from io import BytesIO
 
 logger = logging.getLogger(__name__)
 
@@ -14,21 +16,10 @@ class BananaService:
 
     def __init__(self, config):
         self.config = config
-
-        # 初始化Gemini客户端，支持自定义 API URL 和独立的 API Key
-        client_kwargs = {'api_key': config.BANANA_API_KEY}
-
-        # 如果配置了自定义 Banana API URL，则使用 HttpOptions 设置
-        if config.BANANA_API_BASE_URL and config.BANANA_API_BASE_URL != 'https://generativelanguage.googleapis.com':
-            from google.genai.types import HttpOptions
-            client_kwargs['http_options'] = HttpOptions(base_url=config.BANANA_API_BASE_URL)
-            logger.info(f"使用自定义 Banana API URL: {config.BANANA_API_BASE_URL}")
-
-        self.client = genai.Client(**client_kwargs)
-
-        # 使用配置的图片生成模型
+        self.api_key = config.BANANA_API_KEY
+        self.api_base_url = config.BANANA_API_BASE_URL
         self.model_name = config.BANANA_MODEL
-        logger.info(f"BananaService初始化完成 - 使用模型: {self.model_name}")
+        logger.info(f"BananaService初始化完成 - 使用模型: {self.model_name}, API URL: {self.api_base_url}")
 
     def load_prompt(self, prompt_file):
         """加载提示词文件"""
@@ -64,33 +55,112 @@ class BananaService:
         def api_call():
             logger.info(f"调用Gemini {self.model_name} 生成图片")
 
-            # 使用新的Gemini API调用图片生成
-            response = self.client.models.generate_content(
-                model=self.model_name,
-                contents=[prompt],
-                config=types.GenerateContentConfig(
-                    response_modalities=['IMAGE'],  # 只生成图片
-                    image_config=types.ImageConfig(
-                        aspect_ratio=aspect_ratio,  # 16:9适合PPT
-                        image_size=image_size  # 2K分辨率
-                    ),
+            # 构建API URL
+            api_url = f"{self.api_base_url}/v1beta/models/{self.model_name}:streamGenerateContent"
+
+            # 构建generationConfig
+            generation_config = {
+                "responseModalities": ["IMAGE"]
+            }
+
+            # 只有 gemini-3.0 开头的模型才支持 imageConfig 参数
+            if self.model_name.startswith("gemini-3.0"):
+                generation_config["imageConfig"] = {
+                    "aspect_ratio": aspect_ratio,
+                    "image_size": image_size
+                }
+                logger.info(f"模型 {self.model_name} 支持 imageConfig，使用配置: aspect_ratio={aspect_ratio}, image_size={image_size}")
+            else:
+                logger.warning(f"模型 {self.model_name} 不支持 imageConfig 参数，将忽略 aspect_ratio 和 image_size 配置")
+
+            # 构建请求体
+            request_body = {
+                "contents": [
+                    {
+                        "role": "user",
+                        "parts": [
+                            {
+                                "text": prompt
+                            }
+                        ]
+                    }
+                ],
+                "generationConfig": generation_config
+            }
+            
+            # 设置请求头
+            headers = {
+                "Content-Type": "application/json"
+            }
+            
+            # 设置请求参数（API Key）
+            params = {
+                "key": self.api_key
+            }
+            
+            try:
+                # 发送请求
+                response = requests.post(
+                    api_url,
+                    json=request_body,
+                    headers=headers,
+                    params=params,
+                    timeout=self.config.API_TIMEOUT
                 )
-            )
-            logger.info("Gemini API调用成功")
-
-            # 提取并保存图片
-            for part in response.parts:
-                if part.inline_data is not None:
-                    logger.info("从响应中提取图片数据")
-                    # 使用as_image()方法获取PIL Image对象
-                    image = part.as_image()
-                    # 保存图片
-                    image.save(output_path)
-                    logger.info(f"图片已保存: {output_path}")
-                    return output_path
-
-            # 如果没有图片，抛出异常触发重试
-            raise Exception("Gemini未返回图片数据")
+                
+                logger.info(f"API 返回，状态码: {response.status_code}")
+                
+                # 检查响应状态
+                if response.status_code != 200:
+                    logger.error(f"API 返回错误: {response.text}")
+                    raise Exception(f"API返回错误状态码 {response.status_code}: {response.text}")
+                
+                # 解析响应（流式响应）
+                response_text = response.text
+                logger.debug(f"响应内容: {response_text[:500]}...")
+                
+                # 解析流式响应中的图片数据
+                image_data = None
+                for line in response_text.strip().split('\n'):
+                    if line.startswith('data: '):
+                        try:
+                            data = json.loads(line[6:])  # 去掉 "data: " 前缀
+                            if 'candidates' in data:
+                                for candidate in data['candidates']:
+                                    if 'content' in candidate and 'parts' in candidate['content']:
+                                        for part in candidate['content']['parts']:
+                                            if 'inlineData' in part:
+                                                image_data = part['inlineData']['data']
+                                                logger.info("从响应中提取图片数据")
+                                                break
+                                    if image_data:
+                                        break
+                            if image_data:
+                                break
+                        except json.JSONDecodeError:
+                            continue
+                
+                if not image_data:
+                    raise Exception("Gemini未返回图片数据")
+                
+                # 解码base64图片数据
+                image_bytes = base64.b64decode(image_data)
+                image = Image.open(BytesIO(image_bytes))
+                
+                # 保存图片
+                image.save(output_path)
+                logger.info(f"图片已保存: {output_path}")
+                return output_path
+                
+            except requests.exceptions.Timeout:
+                logger.error(f"API 调用超时")
+                raise Exception(f"API调用超时（{self.config.API_TIMEOUT}秒）")
+            except requests.exceptions.RequestException as e:
+                logger.error(f"请求异常: {type(e).__name__}: {str(e)}")
+                raise
+            except Exception as e:
+                logger.error(f"API 调用异常: {type(e).__name__}: {str(e)}")
+                raise
 
         # 调用重试机制，失败时抛出异常
         return self.retry_api_call(api_call)
@@ -181,35 +251,127 @@ class BananaService:
         def api_call():
             logger.info(f"调用Gemini {self.model_name} 生成图片（带参考）")
 
-            # 加载参考图片
+            # 加载参考图片并转换为base64
             reference_image = Image.open(reference_image_path)
             logger.info(f"参考图片已加载: {reference_image.size}")
+            
+            # 将图片转换为base64
+            buffered = BytesIO()
+            reference_image.save(buffered, format="PNG")
+            img_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+            
+            # 构建API URL
+            api_url = f"{self.api_base_url}/v1beta/models/{self.model_name}:streamGenerateContent"
 
-            # 使用Gemini API调用图片生成（文字+图片转图片）
-            response = self.client.models.generate_content(
-                model=self.model_name,
-                contents=[prompt, reference_image],  # 同时传入文字和图片
-                config=types.GenerateContentConfig(
-                    response_modalities=['IMAGE'],
-                    image_config=types.ImageConfig(
-                        aspect_ratio=aspect_ratio,
-                        image_size=image_size
-                    ),
+            # 构建generationConfig
+            generation_config = {
+                "responseModalities": ["IMAGE"]
+            }
+
+            # 只有 gemini-3.0 开头的模型才支持 imageConfig 参数
+            if self.model_name.startswith("gemini-3.0"):
+                generation_config["imageConfig"] = {
+                    "aspect_ratio": aspect_ratio,
+                    "image_size": image_size
+                }
+                logger.info(f"模型 {self.model_name} 支持 imageConfig，使用配置: aspect_ratio={aspect_ratio}, image_size={image_size}")
+            else:
+                logger.warning(f"模型 {self.model_name} 不支持 imageConfig 参数，将忽略 aspect_ratio 和 image_size 配置")
+
+            # 构建请求体（同时传入文字和图片）
+            request_body = {
+                "contents": [
+                    {
+                        "role": "user",
+                        "parts": [
+                            {
+                                "text": prompt
+                            },
+                            {
+                                "inlineData": {
+                                    "mimeType": "image/png",
+                                    "data": img_base64
+                                }
+                            }
+                        ]
+                    }
+                ],
+                "generationConfig": generation_config
+            }
+            
+            # 设置请求头
+            headers = {
+                "Content-Type": "application/json"
+            }
+            
+            # 设置请求参数（API Key）
+            params = {
+                "key": self.api_key
+            }
+            
+            try:
+                # 发送请求
+                response = requests.post(
+                    api_url,
+                    json=request_body,
+                    headers=headers,
+                    params=params,
+                    timeout=self.config.API_TIMEOUT
                 )
-            )
-            logger.info("Gemini API调用成功")
-
-            # 提取并保存图片
-            for part in response.parts:
-                if part.inline_data is not None:
-                    logger.info("从响应中提取图片数据")
-                    image = part.as_image()
-                    image.save(output_path)
-                    logger.info(f"图片已保存: {output_path}")
-                    return output_path
-
-            # 如果没有图片，抛出异常触发重试
-            raise Exception("Gemini未返回图片数据")
+                
+                logger.info(f"API 返回，状态码: {response.status_code}")
+                
+                # 检查响应状态
+                if response.status_code != 200:
+                    logger.error(f"API 返回错误: {response.text}")
+                    raise Exception(f"API返回错误状态码 {response.status_code}: {response.text}")
+                
+                # 解析响应（流式响应）
+                response_text = response.text
+                logger.debug(f"响应内容: {response_text[:500]}...")
+                
+                # 解析流式响应中的图片数据
+                image_data = None
+                for line in response_text.strip().split('\n'):
+                    if line.startswith('data: '):
+                        try:
+                            data = json.loads(line[6:])  # 去掉 "data: " 前缀
+                            if 'candidates' in data:
+                                for candidate in data['candidates']:
+                                    if 'content' in candidate and 'parts' in candidate['content']:
+                                        for part in candidate['content']['parts']:
+                                            if 'inlineData' in part:
+                                                image_data = part['inlineData']['data']
+                                                logger.info("从响应中提取图片数据")
+                                                break
+                                    if image_data:
+                                        break
+                            if image_data:
+                                break
+                        except json.JSONDecodeError:
+                            continue
+                
+                if not image_data:
+                    raise Exception("Gemini未返回图片数据")
+                
+                # 解码base64图片数据
+                image_bytes = base64.b64decode(image_data)
+                image = Image.open(BytesIO(image_bytes))
+                
+                # 保存图片
+                image.save(output_path)
+                logger.info(f"图片已保存: {output_path}")
+                return output_path
+                
+            except requests.exceptions.Timeout:
+                logger.error(f"API 调用超时")
+                raise Exception(f"API调用超时（{self.config.API_TIMEOUT}秒）")
+            except requests.exceptions.RequestException as e:
+                logger.error(f"请求异常: {type(e).__name__}: {str(e)}")
+                raise
+            except Exception as e:
+                logger.error(f"API 调用异常: {type(e).__name__}: {str(e)}")
+                raise
 
         # 调用重试机制，失败时抛出异常
         return self.retry_api_call(api_call)
