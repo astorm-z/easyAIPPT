@@ -153,7 +153,99 @@ class GeminiService:
 
         return self.retry_api_call(api_call)
 
-    def regenerate_outline_page(self, knowledge_text, user_prompt, page_number, existing_pages):
+    def build_outline_prompt(self, knowledge_text, user_prompt, expected_pages):
+        """构建大纲生成提示词"""
+        # 加载提示词模板
+        prompt_template = self.load_prompt('outline_generation.txt')
+
+        # 构建完整提示词
+        full_prompt = prompt_template.format(
+            knowledge_text=knowledge_text[:10000],  # 限制知识库文本长度
+            user_prompt=user_prompt,
+            expected_pages=expected_pages
+        )
+
+        return full_prompt
+
+    def generate_outline_with_custom_prompt(self, custom_prompt):
+        """使用自定义提示词生成大纲"""
+        def api_call():
+            import requests
+            import sys
+            
+            # 构建API URL
+            api_url = f"{self.api_base_url}/v1beta/models/{self.model}:generateContent"
+            print(f"[Gemini] API URL: {api_url}")
+            print(f"[Gemini] 使用自定义提示词调用 Gemini API，超时时间: {self.config.API_TIMEOUT}秒")
+            sys.stdout.flush()
+            
+            # 构建请求体
+            request_body = {
+                "contents": [{
+                    "parts": [{
+                        "text": custom_prompt
+                    }]
+                }],
+                "generationConfig": {
+                    "temperature": 0.7,
+                    "topP": 0.95,
+                    "topK": 40,
+                    "maxOutputTokens": 8192,
+                }
+            }
+            
+            # 设置请求头和参数
+            headers = {"Content-Type": "application/json"}
+            params = {"key": self.api_key}
+            
+            try:
+                # 发送请求
+                response = requests.post(
+                    api_url,
+                    json=request_body,
+                    headers=headers,
+                    params=params,
+                    timeout=self.config.API_TIMEOUT
+                )
+                
+                print(f"[Gemini] API 返回，状态码: {response.status_code}")
+                
+                if response.status_code != 200:
+                    print(f"[Gemini] API 返回错误: {response.text}")
+                    raise Exception(f"API返回错误状态码 {response.status_code}: {response.text}")
+                
+                # 解析响应
+                response_data = response.json()
+                text = response_data['candidates'][0]['content']['parts'][0]['text'].strip()
+                print(f"[Gemini] API 返回成功，响应文本长度: {len(text)} 字符")
+                
+            except requests.exceptions.Timeout:
+                print(f"[Gemini] API 调用超时")
+                raise Exception(f"API调用超时（{self.config.API_TIMEOUT}秒）")
+            except Exception as e:
+                print(f"[Gemini] API 调用异常: {type(e).__name__}: {str(e)}")
+                raise
+            
+            # 移除可能的markdown代码块标记
+            if text.startswith('```json'):
+                text = text[7:]
+            if text.startswith('```'):
+                text = text[3:]
+            if text.endswith('```'):
+                text = text[:-3]
+            
+            try:
+                result = json.loads(text.strip())
+                print(f"[Gemini] JSON 解析成功")
+                return result
+            except json.JSONDecodeError as e:
+                print(f"[Gemini] JSON 解析失败: {str(e)}")
+                print(f"[Gemini] 尝试解析的文本: {text[:500]}")
+                raise
+
+        return self.retry_api_call(api_call)
+
+    def regenerate_outline_page(self, knowledge_text, user_prompt, page_number, existing_pages, extra_prompt=''):
         """重新生成单页大纲"""
         import requests
         
@@ -166,11 +258,13 @@ class GeminiService:
             context += f"第{page['page_number']}页: {page['title']}\n"
 
         # 构建完整提示词
+        extra_instruction = f"\n\n额外要求：{extra_prompt}" if extra_prompt else ""
+        
         full_prompt = f"""{prompt_template}
 
 {context}
 
-请重新生成第{page_number}页的内容，要求与其他页面保持连贯性。
+请重新生成第{page_number}页的内容，要求与其他页面保持连贯性。{extra_instruction}
 
 知识库内容:
 {knowledge_text[:5000]}

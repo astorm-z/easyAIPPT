@@ -66,12 +66,36 @@ function unescapeHtml(text) {
     return div.textContent;
 }
 
-// 生成大纲
+// 生成大纲（先显示提示词）
 async function generateOutline() {
+    try {
+        // 获取提示词
+        const promptData = await apiRequest(`/api/ppt/${projectId}/outline/prompt`);
+
+        // 显示提示词编辑模态框
+        document.getElementById('generate-prompt-text').value = promptData.prompt;
+        showModal('generate-prompt-modal');
+    } catch (error) {
+        showError('获取提示词失败: ' + error.message);
+    }
+}
+
+// 确认生成大纲
+async function confirmGenerateOutline(event) {
+    event.preventDefault();
+
+    const customPrompt = document.getElementById('generate-prompt-text').value;
+
+    // 隐藏模态框
+    hideGeneratePromptModal();
+
+    // 显示加载状态
     showLoading('loading');
+
     try {
         await apiRequest(`/api/ppt/${projectId}/outline/generate`, {
-            method: 'POST'
+            method: 'POST',
+            body: JSON.stringify({ custom_prompt: customPrompt })
         });
         showSuccess('大纲生成成功');
         await loadOutline(projectId);
@@ -80,6 +104,11 @@ async function generateOutline() {
     } finally {
         hideLoading('loading');
     }
+}
+
+// 隐藏生成提示词模态框
+function hideGeneratePromptModal() {
+    hideModal('generate-prompt-modal');
 }
 
 // 重新生成大纲
@@ -137,20 +166,40 @@ async function saveOutlinePage(event) {
     }
 }
 
-// 重新生成单页大纲
+// 重新生成单页大纲（显示额外提示词输入框）
 async function regenerateOutlinePage(pageNumber) {
-    const confirmed = await showConfirm(`确定要重新生成第 ${pageNumber} 页吗？`, '重新生成');
-    if (!confirmed) return;
+    // 显示重新生成提示词模态框
+    document.getElementById('regenerate-page-number').value = pageNumber;
+    document.getElementById('regenerate-extra-prompt').value = '';
+    showModal('regenerate-prompt-modal');
+}
+
+// 确认重新生成单页大纲
+async function confirmRegenerateOutlinePage(event) {
+    event.preventDefault();
+
+    const pageNumber = document.getElementById('regenerate-page-number').value;
+    const extraPrompt = document.getElementById('regenerate-extra-prompt').value.trim();
+
+    // 隐藏模态框
+    hideRegeneratePromptModal();
 
     try {
+        const body = extraPrompt ? { extra_prompt: extraPrompt } : {};
         await apiRequest(`/api/ppt/${projectId}/outline/${pageNumber}/regenerate`, {
-            method: 'POST'
+            method: 'POST',
+            body: JSON.stringify(body)
         });
         showSuccess('重新生成成功');
         await loadOutline(projectId);
     } catch (error) {
         showError('重新生成失败: ' + error.message);
     }
+}
+
+// 隐藏重新生成提示词模态框
+function hideRegeneratePromptModal() {
+    hideModal('regenerate-prompt-modal');
 }
 
 // 确认大纲

@@ -19,6 +19,10 @@ def init_routes(db_manager: DBManager, gemini_service: GeminiService):
                 print(f"[大纲生成] 项目 {project_id} 不存在")
                 return jsonify({'success': False, 'error': 'PPT项目不存在'}), 404
 
+            # 获取请求数据
+            data = request.get_json() or {}
+            custom_prompt = data.get('custom_prompt')  # 自定义提示词（可选）
+
             print(f"[大纲生成] 获取知识库文本，工作区ID: {project['workspace_id']}")
             # 获取知识库文本
             knowledge_text = db_manager.get_workspace_knowledge_text(project['workspace_id'])
@@ -26,11 +30,15 @@ def init_routes(db_manager: DBManager, gemini_service: GeminiService):
 
             print(f"[大纲生成] 调用Gemini API生成大纲，期望页数: {project['expected_pages']}")
             # 调用Gemini生成大纲
-            outline_data = gemini_service.generate_outline(
-                knowledge_text,
-                project['user_prompt'],
-                project['expected_pages']
-            )
+            if custom_prompt:
+                print(f"[大纲生成] 使用自定义提示词")
+                outline_data = gemini_service.generate_outline_with_custom_prompt(custom_prompt)
+            else:
+                outline_data = gemini_service.generate_outline(
+                    knowledge_text,
+                    project['user_prompt'],
+                    project['expected_pages']
+                )
             print(f"[大纲生成] Gemini API返回成功，生成了 {len(outline_data.get('pages', []))} 页")
 
             # 删除旧大纲
@@ -72,6 +80,28 @@ def init_routes(db_manager: DBManager, gemini_service: GeminiService):
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
 
+    @outline_bp.route('/api/ppt/<int:project_id>/outline/prompt', methods=['GET'])
+    def get_outline_prompt(project_id):
+        """获取生成大纲的提示词"""
+        try:
+            project = db_manager.get_ppt_project(project_id)
+            if not project:
+                return jsonify({'success': False, 'error': 'PPT项目不存在'}), 404
+
+            # 获取知识库文本
+            knowledge_text = db_manager.get_workspace_knowledge_text(project['workspace_id'])
+
+            # 构建提示词
+            prompt = gemini_service.build_outline_prompt(
+                knowledge_text,
+                project['user_prompt'],
+                project['expected_pages']
+            )
+
+            return jsonify({'success': True, 'data': {'prompt': prompt}})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
     @outline_bp.route('/api/ppt/<int:project_id>/outline/<int:page_number>', methods=['PUT'])
     def update_outline_page(project_id, page_number):
         """更新单页大纲"""
@@ -97,6 +127,10 @@ def init_routes(db_manager: DBManager, gemini_service: GeminiService):
             if not project:
                 return jsonify({'success': False, 'error': 'PPT项目不存在'}), 404
 
+            # 获取请求数据
+            data = request.get_json() or {}
+            extra_prompt = data.get('extra_prompt', '').strip()  # 额外提示词
+
             # 获取知识库文本
             knowledge_text = db_manager.get_workspace_knowledge_text(project['workspace_id'])
 
@@ -112,7 +146,8 @@ def init_routes(db_manager: DBManager, gemini_service: GeminiService):
                 knowledge_text,
                 project['user_prompt'],
                 page_number,
-                pages
+                pages,
+                extra_prompt
             )
 
             # 更新大纲

@@ -28,6 +28,49 @@
     </div>
 </div>
 
+<!-- 生成大纲提示词编辑模态框 -->
+<div id="generate-prompt-modal" class="modal-overlay">
+    <div class="modal" style="max-width: 800px;">
+        <div class="modal-header">
+            <button class="modal-close" onclick="hideGeneratePromptModal()">&times;</button>
+            <h3 class="modal-title">生成大纲提示词</h3>
+        </div>
+        <form id="generate-prompt-form" onsubmit="confirmGenerateOutline(event)">
+            <div class="mb-md">
+                <label for="generate-prompt-text">提示词内容</label>
+                <p class="text-muted text-sm mb-sm">您可以修改下方的提示词，调整后点击"生成大纲"按钮</p>
+                <textarea id="generate-prompt-text" style="min-height: 400px; font-family: monospace; font-size: 0.9em;" required></textarea>
+            </div>
+            <div class="text-right">
+                <button type="button" class="btn" onclick="hideGeneratePromptModal()">取消</button>
+                <button type="submit" class="btn btn-primary">生成大纲</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 重新生成单页提示词模态框 -->
+<div id="regenerate-prompt-modal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-header">
+            <button class="modal-close" onclick="hideRegeneratePromptModal()">&times;</button>
+            <h3 class="modal-title">重新生成页面</h3>
+        </div>
+        <form id="regenerate-prompt-form" onsubmit="confirmRegenerateOutlinePage(event)">
+            <input type="hidden" id="regenerate-page-number">
+            <div class="mb-lg">
+                <label for="regenerate-extra-prompt">额外提示词（可选）</label>
+                <p class="text-muted text-sm mb-sm">输入额外的要求或提示，将在原有提示词基础上补充</p>
+                <textarea id="regenerate-extra-prompt" placeholder="例如：增加更多技术细节、使用更生动的语言等"></textarea>
+            </div>
+            <div class="text-right">
+                <button type="button" class="btn" onclick="hideRegeneratePromptModal()">取消</button>
+                <button type="submit" class="btn btn-primary">重新生成</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- 编辑大纲页模态框 -->
 <div id="edit-modal" class="modal-overlay">
     <div class="modal">
