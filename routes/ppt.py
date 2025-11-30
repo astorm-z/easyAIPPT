@@ -163,6 +163,36 @@ def init_routes(db_manager: DBManager, banana_service: BananaService, ppt_genera
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
 
+
+    @ppt_bp.route('/api/ppt/<int:project_id>/pages/prompts', methods=['GET'])
+    def get_pages_prompts(project_id):
+        """获取所有页面的生成提示词"""
+        try:
+            project = db_manager.get_ppt_project(project_id)
+            if not project:
+                return jsonify({'success': False, 'error': 'PPT项目不存在'}), 404
+
+            # 获取大纲
+            outline_pages = db_manager.get_outline_pages(project_id)
+            if not outline_pages:
+                return jsonify({'success': False, 'error': '大纲不存在'}), 404
+
+            # 获取选中的样式模板
+            styles = db_manager.get_style_templates(project_id)
+            selected_style = None
+            if project['selected_style_index'] is not None:
+                selected_style = next(
+                    (s for s in styles if s['template_index'] == project['selected_style_index']),
+                    None
+                )
+
+            # 构建每一页的提示词
+            prompts = ppt_generator.build_page_prompts(outline_pages, selected_style)
+
+            return jsonify({'success': True, 'data': prompts})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
     @ppt_bp.route('/api/ppt/<int:project_id>/pages/generate', methods=['POST'])
     def generate_pages(project_id):
         """开始生成所有页面"""
@@ -175,6 +205,10 @@ def init_routes(db_manager: DBManager, banana_service: BananaService, ppt_genera
             if not project:
                 return jsonify({'success': False, 'error': 'PPT项目不存在'}), 404
 
+            # 获取请求数据
+            data = request.get_json() or {}
+            custom_prompts = data.get('custom_prompts')  # 自定义提示词列表（可选）
+
             # 检查是否需要恢复
             if project['status'] == 'generating':
                 logger.info("项目正在生成中，尝试恢复")
@@ -183,7 +217,7 @@ def init_routes(db_manager: DBManager, banana_service: BananaService, ppt_genera
                     return jsonify({'success': True, 'message': '已恢复生成任务'})
 
             # 启动生成任务（异步）
-            ppt_generator.start_generation(project_id)
+            ppt_generator.start_generation(project_id, custom_prompts)
 
             return jsonify({'success': True})
         except Exception as e:

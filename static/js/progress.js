@@ -249,15 +249,56 @@ function getPageStatusText(status) {
     return statusMap[status] || status;
 }
 
-// 开始生成PPT
-async function startGeneration() {
-    const confirmed = await showConfirm('开始生成PPT页面，这可能需要较长时间，确定吗？', '开始生成');
-    if (!confirmed) return;
+// 显示生成提示词
+async function showGeneratePrompt() {
+    try {
+        // 获取所有页面的提示词
+        const promptsData = await apiRequest(`/api/ppt/${projectId}/pages/prompts`);
+
+        // 显示提示词列表
+        const container = document.getElementById('ppt-prompts-container');
+        container.innerHTML = promptsData.map(item => `
+            <div class="mb-lg" style="border: 1px solid var(--color-gray-200); border-radius: 4px; padding: var(--spacing-md);">
+                <h4 class="mb-sm">第 ${item.page_number} 页: ${escapeHtml(item.title)}</h4>
+                <textarea
+                    id="prompt-${item.page_number}"
+                    data-page-number="${item.page_number}"
+                    style="width: 100%; min-height: 200px; font-family: monospace; font-size: 0.85em;"
+                >${escapeHtml(item.prompt)}</textarea>
+            </div>
+        `).join('');
+
+        // 显示模态框
+        showModal('generate-ppt-prompt-modal');
+    } catch (error) {
+        showError('获取提示词失败: ' + error.message);
+    }
+}
+
+// 隐藏生成PPT提示词模态框
+function hideGeneratePPTPromptModal() {
+    hideModal('generate-ppt-prompt-modal');
+}
+
+// 确认开始生成
+async function confirmStartGeneration() {
+    // 收集所有修改后的提示词
+    const container = document.getElementById('ppt-prompts-container');
+    const textareas = container.querySelectorAll('textarea[data-page-number]');
+
+    const customPrompts = Array.from(textareas).map(textarea => ({
+        page_number: parseInt(textarea.dataset.pageNumber),
+        prompt: textarea.value
+    }));
+
+    // 隐藏模态框
+    hideGeneratePPTPromptModal();
 
     try {
         // 启动生成任务
         await apiRequest(`/api/ppt/${projectId}/pages/generate`, {
-            method: 'POST'
+            method: 'POST',
+            body: JSON.stringify({ custom_prompts: customPrompts })
         });
 
         // 显示进度条
@@ -269,6 +310,18 @@ async function startGeneration() {
     } catch (error) {
         showError('启动生成失败: ' + error.message);
     }
+}
+
+// 转义HTML（如果main.js中没有定义）
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// 开始生成PPT（保留旧函数名以兼容）
+async function startGeneration() {
+    await showGeneratePrompt();
 }
 
 // 监听生成进度（SSE）

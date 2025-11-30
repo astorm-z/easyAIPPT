@@ -83,11 +83,44 @@ class PPTGenerator:
         logger.info(f"项目 {project_id} 的所有样式模板生成完成")
         return styles
 
-    def start_generation(self, project_id):
+
+    def build_page_prompts(self, outline_pages, selected_style):
+        """构建所有页面的生成提示词"""
+        # 加载提示词模板
+        prompt_template = self.load_prompt('page_generation.txt')
+
+        # 获取样式参考描述
+        style_reference = "现代简约风格" if not selected_style else "参考已选择的样式模板"
+
+        prompts = []
+        for page in outline_pages:
+            # 构建页面内容描述
+            page_content = f"""
+标题: {page['title']}
+内容: {page['content']}
+"""
+            if page.get('image_prompt'):
+                page_content += f"图片提示: {page['image_prompt']}"
+
+            # 构建完整提示词
+            full_prompt = prompt_template.format(
+                page_content=page_content,
+                style_reference=style_reference
+            )
+
+            prompts.append({
+                'page_number': page['page_number'],
+                'title': page['title'],
+                'prompt': full_prompt
+            })
+
+        return prompts
+
+    def start_generation(self, project_id, custom_prompts=None):
         """启动PPT页面生成（异步）"""
         logger.info(f"启动PPT页面生成任务: project_id={project_id}")
         # 在新线程中执行生成任务
-        thread = threading.Thread(target=self._generate_pages, args=(project_id,))
+        thread = threading.Thread(target=self._generate_pages, args=(project_id, custom_prompts))
         thread.daemon = True
         thread.start()
 
@@ -120,7 +153,7 @@ class PPTGenerator:
         self.start_generation(project_id)
         return True
 
-    def _generate_pages(self, project_id):
+    def _generate_pages(self, project_id, custom_prompts=None):
         """生成所有PPT页面"""
         try:
             # 获取项目信息
@@ -177,6 +210,12 @@ class PPTGenerator:
             }
             logger.info(f"生成状态初始化: 已完成 {completed_count}/{len(outline_pages)} 页")
 
+            # 构建自定义提示词字典（如果提供）
+            custom_prompts_dict = {}
+            if custom_prompts:
+                for prompt_data in custom_prompts:
+                    custom_prompts_dict[prompt_data['page_number']] = prompt_data['prompt']
+
             # 逐页生成
             for page in outline_pages:
                 # 检查该页是否已完成
@@ -186,49 +225,61 @@ class PPTGenerator:
                     continue
 
                 try:
-                    logger.info(f"开始生成第 {page['page_number']}/{len(outline_pages)} 页")
-                    self.generation_status[project_id]['current_page'] = page['page_number']
+                    logger.info(f"开始生成第 {page['page_number']} 页")
+                    # 更新页面状态为生成中
+                    self.db_manager.update_ppt_page_status(project_id, page['page_number'], 'generating')
 
-                    output_path = os.path.join(output_dir, f'page_{page["page_number"]:03d}.png')
-
-                    # 构建页面内容描述
-                    page_content = f"标题: {page['title']}\n内容: {page['content']}"
-                    if page['image_prompt']:
-                        page_content += f"\n图片提示: {page['image_prompt']}"
+                    # 使用自定义提示词或默认提示词
+                    if page['page_number'] in custom_prompts_dict:
+                        prompt = custom_prompts_dict[page['page_number']]
+                        logger.info(f"使用自定义提示词生成第 {page['page_number']} 页")
+                    else:
+                        # 构建默认提示词
+                        prompt = self._build_page_prompt(page, selected_style)
 
                     # 生成图片
-                    style_ref = selected_style['image_path'] if selected_style else ''
-                    self.banana_service.generate_ppt_page(page_content, style_ref, output_path)
+                    image_path = self._generate_page_image(
+                        project_id,
+                        page['page_number'],
+                        prompt,
+                        output_dir
+                    )
 
-                    # 更新页面状态
+                    # 更新页面状态和路径
                     self.db_manager.update_ppt_page(
                         project_id,
                         page['page_number'],
-                        output_path,
-                        'completed'
+                        'completed',
+                        image_path
                     )
+
+                    # 更新生成状态
+                    self.generation_status[project_id]['current_page'] += 1
                     logger.info(f"第 {page['page_number']} 页生成完成")
 
                 except Exception as e:
-                    # 记录错误
+                    logger.error(f"生成第 {page['page_number']} 页失败: {str(e)}")
+                    # 更新页面状态为失败
                     self.db_manager.update_ppt_page(
                         project_id,
                         page['page_number'],
-                        '',
                         'failed',
-                        str(e)
+                        error_message=str(e)
                     )
+                    # 继续生成下一页
+                    continue
 
-            # 更新项目状态
-            self.db_manager.update_ppt_project_status(project_id, 'completed')
+            # 所有页面生成完成
             self.generation_status[project_id]['status'] = 'completed'
+            self.db_manager.update_ppt_project_status(project_id, 'completed')
+            logger.info(f"项目 {project_id} 所有页面生成完成")
 
         except Exception as e:
-            # 更新项目状态为失败
-            self.db_manager.update_ppt_project_status(project_id, 'failed')
+            logger.error(f"生成PPT页面失败: {str(e)}")
             if project_id in self.generation_status:
                 self.generation_status[project_id]['status'] = 'failed'
                 self.generation_status[project_id]['error'] = str(e)
+            self.db_manager.update_ppt_project_status(project_id, 'failed')
 
     def get_generation_progress(self, project_id) -> Generator[Dict[str, Any], None, None]:
         """获取生成进度（生成器，用于SSE）"""
