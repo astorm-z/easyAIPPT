@@ -14,8 +14,18 @@ class BananaService:
 
     def __init__(self, config):
         self.config = config
-        # 初始化Gemini客户端
-        self.client = genai.Client(api_key=config.GEMINI_API_KEY)
+
+        # 初始化Gemini客户端，支持自定义 API URL
+        client_kwargs = {'api_key': config.GEMINI_API_KEY}
+
+        # 如果配置了自定义 Banana API URL，则使用 HttpOptions 设置
+        if config.BANANA_API_BASE_URL and config.BANANA_API_BASE_URL != 'https://generativelanguage.googleapis.com':
+            from google.genai.types import HttpOptions
+            client_kwargs['http_options'] = HttpOptions(base_url=config.BANANA_API_BASE_URL)
+            logger.info(f"使用自定义 Banana API URL: {config.BANANA_API_BASE_URL}")
+
+        self.client = genai.Client(**client_kwargs)
+
         # 使用Gemini 3 Pro Image Preview模型（Nano Banana Pro）
         self.model_name = 'gemini-3-pro-image-preview'
         logger.info(f"BananaService初始化完成 - 使用模型: {self.model_name}")

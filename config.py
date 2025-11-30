@@ -16,7 +16,11 @@ class Config:
     # Gemini API配置
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
     GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-1.5-pro')
-    # 图片生成也使用Gemini API（gemini-2.0-flash-exp模型）
+    GEMINI_API_BASE_URL = os.getenv('GEMINI_API_BASE_URL', 'https://generativelanguage.googleapis.com')
+
+    # Banana (图片生成) API配置
+    # 图片生成也使用Gemini API（gemini-3-pro-image-preview模型）
+    BANANA_API_BASE_URL = os.getenv('BANANA_API_BASE_URL', 'https://generativelanguage.googleapis.com')
 
     # 数据库配置
     DATABASE_PATH = os.getenv('DATABASE_PATH', './database/easyaippt.db')

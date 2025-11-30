@@ -10,7 +10,15 @@ class GeminiService:
 
     def __init__(self, config):
         self.config = config
-        genai.configure(api_key=config.GEMINI_API_KEY)
+
+        # 配置 Gemini API，支持自定义 URL
+        configure_kwargs = {'api_key': config.GEMINI_API_KEY}
+
+        # 如果配置了自定义 API URL，则添加 client_options
+        if config.GEMINI_API_BASE_URL and config.GEMINI_API_BASE_URL != 'https://generativelanguage.googleapis.com':
+            configure_kwargs['client_options'] = {'api_endpoint': config.GEMINI_API_BASE_URL}
+
+        genai.configure(**configure_kwargs)
         self.model = genai.GenerativeModel(config.GEMINI_MODEL)
 
     def load_prompt(self, prompt_file):

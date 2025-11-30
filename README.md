@@ -98,8 +98,15 @@ cp .env.example .env
 GEMINI_API_KEY=your_gemini_api_key_here
 GEMINI_MODEL=gemini-1.5-pro
 
+# Gemini API Base URL（可选，默认使用Google官方API）
+# 如需使用代理或自建服务，可以修改此URL
+GEMINI_API_BASE_URL=https://generativelanguage.googleapis.com
+
+# Banana (图片生成) API配置
 # 注意：图片生成使用 gemini-3-pro-image-preview 模型（Nano Banana Pro）
-# 只需要配置一个Gemini API密钥即可
+# Banana API Base URL（可选，默认使用Google官方API）
+# 可以独立配置图片生成API的URL，与文本生成API分离
+BANANA_API_BASE_URL=https://generativelanguage.googleapis.com
 
 # Flask应用配置
 FLASK_SECRET_KEY=your_secret_key_here
@@ -113,6 +120,20 @@ UPLOAD_FOLDER=./uploads
 GENERATED_FOLDER=./generated
 MAX_UPLOAD_SIZE=50
 ```
+
+#### 自定义 API URL 说明
+
+如果你需要使用代理服务或自建的 Gemini API 服务，可以通过以下环境变量配置：
+
+- **GEMINI_API_BASE_URL**：用于大纲生成的 Gemini API 地址
+- **BANANA_API_BASE_URL**：用于图片生成的 Gemini API 地址
+
+两个 URL 可以独立配置，例如：
+- 使用不同的代理服务
+- 将文本生成和图片生成分流到不同的服务器
+- 使用自建的 API 网关
+
+如果不配置这两个变量，系统将默认使用 Google 官方 API 地址。
 
 ### 5. 运行应用
 
