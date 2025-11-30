@@ -63,8 +63,8 @@ class BananaService:
                 "responseModalities": ["IMAGE"]
             }
 
-            # 只有 gemini-3.0 开头的模型才支持 imageConfig 参数
-            if self.model_name.startswith("gemini-3.0"):
+            # 只有 gemini-3 开头的模型才支持 imageConfig 参数
+            if self.model_name.startswith("gemini-3"):
                 generation_config["imageConfig"] = {
                     "aspect_ratio": aspect_ratio,
                     "image_size": image_size
@@ -265,8 +265,8 @@ class BananaService:
                 "responseModalities": ["IMAGE"]
             }
 
-            # 只有 gemini-3.0 开头的模型才支持 imageConfig 参数
-            if self.model_name.startswith("gemini-3.0"):
+            # 只有 gemini-3 开头的模型才支持 imageConfig 参数
+            if self.model_name.startswith("gemini-3"):
                 generation_config["imageConfig"] = {
                     "aspect_ratio": aspect_ratio,
                     "image_size": image_size
