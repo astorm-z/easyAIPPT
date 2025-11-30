@@ -9,8 +9,13 @@
 {% block content %}
 <div class="container">
     <div class="mb-xl">
-        <h1 id="workspace-title">工作空间</h1>
-        <p id="workspace-desc" class="text-muted"></p>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+                <h1 id="workspace-title">工作空间</h1>
+                <p id="workspace-desc" class="text-muted"></p>
+            </div>
+            <button id="delete-workspace-btn" class="btn" style="margin-top: 0.5rem;">删除工作空间</button>
+        </div>
     </div>
 
     <div class="grid grid-2">

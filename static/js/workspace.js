@@ -27,8 +27,9 @@ function displayWorkspaces(workspaces) {
         <div class="card">
             <h3 class="card-title">${ws.name}</h3>
             <p class="card-content">${ws.description || '暂无描述'}</p>
-            <div class="mt-md">
-                <a href="/workspace/${ws.id}" class="btn">进入</a>
+            <div class="mt-md" style="display: flex; gap: 0.5rem;">
+                <a href="/workspace/${ws.id}" class="btn" style="flex: 1;">进入</a>
+                <button class="btn" onclick="deleteWorkspace(${ws.id}, '${ws.name.replace(/'/g, "\\'")}')">删除</button>
             </div>
         </div>
     `).join('');
@@ -68,12 +69,46 @@ async function createWorkspace(event) {
     }
 }
 
+// 删除工作空间
+async function deleteWorkspace(workspaceId, workspaceName) {
+    const confirmed = await showConfirm(`确定要删除工作空间"${workspaceName}"吗？删除后将无法恢复！`, '删除工作空间');
+    if (!confirmed) return;
+
+    try {
+        await apiRequest(`/api/workspaces/${workspaceId}`, { method: 'DELETE' });
+        showSuccess('工作空间删除成功');
+        loadWorkspaces();
+    } catch (error) {
+        console.error('删除工作空间失败:', error);
+    }
+}
+
+// 删除当前工作空间（从详情页）
+async function deleteCurrentWorkspace(workspaceId, workspaceName) {
+    const confirmed = await showConfirm(`确定要删除工作空间"${workspaceName}"吗？删除后将无法恢复！`, '删除工作空间');
+    if (!confirmed) return;
+
+    try {
+        await apiRequest(`/api/workspaces/${workspaceId}`, { method: 'DELETE' });
+        showSuccess('工作空间删除成功');
+        window.location.href = '/';
+    } catch (error) {
+        console.error('删除工作空间失败:', error);
+    }
+}
+
 // 加载工作空间详情
 async function loadWorkspaceDetail(workspaceId) {
     try {
         const workspace = await apiRequest(`/api/workspaces/${workspaceId}`);
         document.getElementById('workspace-title').textContent = workspace.name;
         document.getElementById('workspace-desc').textContent = workspace.description || '';
+
+        // 绑定删除按钮事件
+        const deleteBtn = document.getElementById('delete-workspace-btn');
+        if (deleteBtn) {
+            deleteBtn.onclick = () => deleteCurrentWorkspace(workspaceId, workspace.name);
+        }
     } catch (error) {
         console.error('加载工作空间详情失败:', error);
     }
