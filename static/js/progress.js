@@ -34,14 +34,36 @@ function displayStyles(styles) {
         // 转换文件路径为URL路径
         const imageUrl = convertPathToUrl(style.image_path);
         return `
-            <div class="card" onclick="selectStyle(${style.template_index})">
-                <img src="${imageUrl}" alt="样式 ${style.template_index + 1}" style="width: 100%; height: auto;">
+            <div class="card">
+                <img src="${imageUrl}"
+                     alt="样式 ${style.template_index + 1}"
+                     style="width: 100%; height: auto; cursor: pointer;"
+                     onclick="viewStyleImage('${imageUrl}', ${style.template_index})"
+                     title="点击查看大图">
                 <div class="mt-sm text-center">
-                    <button class="btn btn-sm">选择此样式</button>
+                    <button class="btn btn-sm" onclick="selectStyle(${style.template_index})">选择此样式</button>
                 </div>
             </div>
         `;
     }).join('');
+}
+
+// 查看样式大图
+function viewStyleImage(imageUrl, styleIndex) {
+    const modal = document.getElementById('style-image-modal');
+    const img = document.getElementById('style-image-large');
+    const title = document.getElementById('style-image-title');
+
+    if (modal && img && title) {
+        img.src = imageUrl;
+        title.textContent = `样式 ${styleIndex + 1}`;
+        showModal('style-image-modal');
+    }
+}
+
+// 关闭样式大图模态框
+function closeStyleImageModal() {
+    hideModal('style-image-modal');
 }
 
 // 转换文件系统路径为URL路径
@@ -216,7 +238,11 @@ function displayPages(pages) {
             <div class="card">
                 <div class="mb-sm text-muted text-sm">第 ${page.page_number} 页</div>
                 ${imageUrl ?
-                    `<img src="${imageUrl}" alt="第 ${page.page_number} 页" style="width: 100%; height: auto;">` :
+                    `<img src="${imageUrl}"
+                          alt="第 ${page.page_number} 页"
+                          style="width: 100%; height: auto; cursor: pointer;"
+                          onclick="viewPageImage('${imageUrl}', ${page.page_number})"
+                          title="点击查看大图">` :
                     `<div style="width: 100%; height: 200px; background: var(--color-gray-50); display: flex; align-items: center; justify-content: center;">
                         <span class="text-muted">${getPageStatusText(page.status)}</span>
                     </div>`
@@ -241,6 +267,24 @@ function displayPages(pages) {
     if (allCompleted) {
         document.getElementById('download-btn').disabled = false;
     }
+}
+
+// 查看PPT页面大图
+function viewPageImage(imageUrl, pageNumber) {
+    const modal = document.getElementById('page-image-modal');
+    const img = document.getElementById('page-image-large');
+    const title = document.getElementById('page-image-title');
+
+    if (modal && img && title) {
+        img.src = imageUrl;
+        title.textContent = `第 ${pageNumber} 页`;
+        showModal('page-image-modal');
+    }
+}
+
+// 关闭PPT页面大图模态框
+function closePageImageModal() {
+    hideModal('page-image-modal');
 }
 
 // 获取页面状态文本

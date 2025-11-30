@@ -71,6 +71,38 @@
         </div>
     </div>
 </div>
+
+<!-- 样式大图查看模态框 -->
+<div id="style-image-modal" class="modal-overlay">
+    <div class="modal" style="max-width: 95vw; max-height: 95vh;">
+        <div class="modal-header">
+            <button class="modal-close" onclick="closeStyleImageModal()">&times;</button>
+            <h3 class="modal-title" id="style-image-title">样式预览</h3>
+        </div>
+        <div style="padding: var(--spacing-lg); text-align: center; max-height: 80vh; overflow: auto;">
+            <img id="style-image-large" src="" alt="样式大图" style="max-width: 100%; height: auto;">
+        </div>
+        <div style="padding: var(--spacing-lg); text-align: center; border-top: 1px solid var(--color-gray-200);">
+            <button class="btn" onclick="closeStyleImageModal()">关闭</button>
+        </div>
+    </div>
+</div>
+
+<!-- PPT页面大图查看模态框 -->
+<div id="page-image-modal" class="modal-overlay">
+    <div class="modal" style="max-width: 95vw; max-height: 95vh;">
+        <div class="modal-header">
+            <button class="modal-close" onclick="closePageImageModal()">&times;</button>
+            <h3 class="modal-title" id="page-image-title">页面预览</h3>
+        </div>
+        <div style="padding: var(--spacing-lg); text-align: center; max-height: 80vh; overflow: auto;">
+            <img id="page-image-large" src="" alt="页面大图" style="max-width: 100%; height: auto;">
+        </div>
+        <div style="padding: var(--spacing-lg); text-align: center; border-top: 1px solid var(--color-gray-200);">
+            <button class="btn" onclick="closePageImageModal()">关闭</button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
