@@ -18,7 +18,7 @@ class Config:
 
     # Gemini API配置
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
-    GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-1.5-pro')
+    GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-3-pro-preview')
     GEMINI_API_BASE_URL = os.getenv('GEMINI_API_BASE_URL', 'https://generativelanguage.googleapis.com')
 
     # Banana (图片生成) API配置

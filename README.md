@@ -26,7 +26,7 @@
 - **数据库**：SQLite
 - **文件存储**：本地文件系统
 - **AI模型**：
-  - Gemini 1.5 Pro（默认，可修改，用于大纲生成）
+  - Gemini 3 Pro Preview（默认，可修改，用于大纲生成）
   - Gemini 3 Pro Image Preview（默认，可修改，用于 PPT 图片生成，支持2K/4K分辨率）
 
 ## 项目结构
@@ -98,7 +98,7 @@ cp .env.example .env
 ```env
 # Gemini API配置
 GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-1.5-pro
+GEMINI_MODEL=gemini-3-pro-preview
 
 # Gemini API Base URL（可选，默认使用Google官方API）
 # 如需使用代理或自建服务，可以修改此URL
@@ -153,7 +153,7 @@ MAX_UPLOAD_SIZE=50
 - **BANANA_API_BASE_URL**：用于图片生成的 Gemini API 地址
 
 **模型配置：**
-- **GEMINI_MODEL**：大纲生成使用的模型（默认：gemini-1.5-pro）
+- **GEMINI_MODEL**：大纲生成使用的模型（默认：gemini-3-pro-preview）
 - **BANANA_MODEL**：图片生成使用的模型（默认：gemini-3-pro-image-preview）
 
 **图片分辨率配置：**
@@ -178,7 +178,7 @@ BANANA_API_KEY=your_image_api_key
 BANANA_API_BASE_URL=https://image-proxy.com
 
 # 场景3：使用不同的模型
-GEMINI_MODEL=gemini-1.5-pro
+GEMINI_MODEL=gemini-3-pro-preview
 BANANA_MODEL=gemini-3-pro-image-preview
 
 # 场景4：自定义图片分辨率（样式模板使用2K，PPT页面使用4K）
@@ -262,7 +262,7 @@ python app.py
 
 项目使用Google Gemini API进行AI功能：
 
-- **大纲生成**：使用 `gemini-1.5-pro` 模型（默认）
+- **大纲生成**：使用 `gemini-3-pro-preview` 模型（默认）
 - **图片生成**：使用 `gemini-3-pro-image-preview` 模型（默认）
   - 支持自定义宽高比（默认16:9，适合PPT）
   - 支持2K/4K高分辨率（样式模板默认2K，PPT页面默认4K）
