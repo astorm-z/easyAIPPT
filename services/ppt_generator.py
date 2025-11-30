@@ -272,8 +272,8 @@ class PPTGenerator:
                     self.db_manager.update_ppt_page(
                         project_id,
                         page['page_number'],
-                        'completed',
-                        image_path
+                        image_path,
+                        'completed'
                     )
 
                     # 更新生成状态
@@ -286,8 +286,9 @@ class PPTGenerator:
                     self.db_manager.update_ppt_page(
                         project_id,
                         page['page_number'],
+                        '',
                         'failed',
-                        error_message=str(e)
+                        str(e)
                     )
                     # 继续生成下一页
                     continue
