@@ -163,24 +163,54 @@ async function previewKnowledgeFile(fileId, fileType) {
 
 // 显示预览模态框
 function showPreviewModal(filename, content, fileType) {
-    const modal = document.createElement('div');
-    modal.className = 'modal';
-    modal.style.display = 'block';
-    modal.innerHTML = `
-        <div class="modal-content" style="max-width: 800px;">
+    // 移除已存在的预览模态框
+    const existingModal = document.getElementById('preview-modal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+    // 创建新的模态框
+    const modalOverlay = document.createElement('div');
+    modalOverlay.id = 'preview-modal';
+    modalOverlay.className = 'modal-overlay active';
+    modalOverlay.innerHTML = `
+        <div class="modal" style="max-width: 800px;">
             <div class="modal-header">
-                <h3>文件预览: ${filename}</h3>
-                <button class="btn-close" onclick="this.closest('.modal').remove()">&times;</button>
+                <button class="modal-close" onclick="closePreviewModal()">&times;</button>
+                <h3 class="modal-title">文件预览: ${escapeHtml(filename)}</h3>
             </div>
-            <div class="modal-body">
-                <pre style="white-space: pre-wrap; max-height: 500px; overflow-y: auto; background: var(--color-gray-50); padding: 1rem; border-radius: 4px;">${content || '无内容'}</pre>
+            <div style="padding: var(--spacing-lg);">
+                <pre style="white-space: pre-wrap; max-height: 500px; overflow-y: auto; background: var(--color-gray-50); padding: 1rem; border-radius: 4px; margin: 0;">${escapeHtml(content || '无内容')}</pre>
             </div>
-            <div class="modal-footer">
-                <button class="btn" onclick="this.closest('.modal').remove()">关闭</button>
+            <div style="padding: var(--spacing-lg); text-align: right; border-top: 1px solid var(--color-gray-200);">
+                <button class="btn" onclick="closePreviewModal()">关闭</button>
             </div>
         </div>
     `;
-    document.body.appendChild(modal);
+
+    // 点击背景关闭
+    modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) {
+            closePreviewModal();
+        }
+    });
+
+    document.body.appendChild(modalOverlay);
+}
+
+// 关闭预览模态框
+function closePreviewModal() {
+    const modal = document.getElementById('preview-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// 转义HTML（如果main.js中没有定义）
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 // 下载知识库文件
