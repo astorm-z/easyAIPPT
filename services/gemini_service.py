@@ -34,18 +34,24 @@ class GeminiService:
 
         for attempt in range(max_retries):
             try:
+                print(f"[Gemini] 尝试第 {attempt + 1}/{max_retries} 次调用")
                 return func()
             except Exception as e:
+                print(f"[Gemini] 第 {attempt + 1} 次调用失败: {str(e)}")
                 if attempt == max_retries - 1:
+                    print(f"[Gemini] 已达到最大重试次数，放弃")
                     raise Exception(f'API调用失败，已重试{max_retries}次: {str(e)}')
                 # 指数退避
                 wait_time = self.config.RETRY_DELAY_BASE ** attempt
+                print(f"[Gemini] 等待 {wait_time} 秒后重试...")
                 time.sleep(wait_time)
 
     def generate_outline(self, knowledge_text, user_prompt, expected_pages):
         """生成PPT大纲"""
+        print(f"[Gemini] 开始生成大纲，期望页数: {expected_pages}")
         # 加载提示词模板
         prompt_template = self.load_prompt('outline_generation.txt')
+        print(f"[Gemini] 已加载提示词模板")
 
         # 构建完整提示词
         full_prompt = prompt_template.format(
@@ -53,11 +59,15 @@ class GeminiService:
             user_prompt=user_prompt,
             expected_pages=expected_pages
         )
+        print(f"[Gemini] 提示词长度: {len(full_prompt)} 字符")
 
         def api_call():
+            print(f"[Gemini] 调用 Gemini API...")
             response = self.model.generate_content(full_prompt)
+            print(f"[Gemini] API 返回成功")
             # 解析JSON响应
             text = response.text.strip()
+            print(f"[Gemini] 响应文本长度: {len(text)} 字符")
             # 移除可能的markdown代码块标记
             if text.startswith('```json'):
                 text = text[7:]
@@ -65,7 +75,9 @@ class GeminiService:
                 text = text[3:]
             if text.endswith('```'):
                 text = text[:-3]
-            return json.loads(text.strip())
+            result = json.loads(text.strip())
+            print(f"[Gemini] JSON 解析成功")
+            return result
 
         return self.retry_api_call(api_call)
 
