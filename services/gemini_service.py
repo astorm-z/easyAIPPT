@@ -2,7 +2,7 @@
 import os
 import json
 import time
-import google.generativeai as genai
+import requests
 
 
 class GeminiService:
@@ -10,16 +10,9 @@ class GeminiService:
 
     def __init__(self, config):
         self.config = config
-
-        # 配置 Gemini API，支持自定义 URL
-        configure_kwargs = {'api_key': config.GEMINI_API_KEY}
-
-        # 如果配置了自定义 API URL，则添加 client_options
-        if config.GEMINI_API_BASE_URL and config.GEMINI_API_BASE_URL != 'https://generativelanguage.googleapis.com':
-            configure_kwargs['client_options'] = {'api_endpoint': config.GEMINI_API_BASE_URL}
-
-        genai.configure(**configure_kwargs)
-        self.model = genai.GenerativeModel(config.GEMINI_MODEL)
+        self.api_key = config.GEMINI_API_KEY
+        self.api_base_url = config.GEMINI_API_BASE_URL
+        self.model = config.GEMINI_MODEL
 
     def load_prompt(self, prompt_file):
         """加载提示词文件"""
@@ -62,33 +55,84 @@ class GeminiService:
         print(f"[Gemini] 提示词长度: {len(full_prompt)} 字符")
 
         def api_call():
-            print(f"[Gemini] 调用 Gemini API，超时时间: {self.config.API_TIMEOUT}秒")
+            import requests
             import sys
+            
+            # 构建API URL
+            api_url = f"{self.api_base_url}/v1beta/models/{self.model}:generateContent"
+            print(f"[Gemini] API URL: {api_url}")
+            print(f"[Gemini] 调用 Gemini API，超时时间: {self.config.API_TIMEOUT}秒")
             sys.stdout.flush()  # 强制刷新输出
             
-            # 设置生成配置
-            generation_config = {
-                'temperature': 0.7,
-                'top_p': 0.95,
-                'top_k': 40,
-                'max_output_tokens': 8192,
+            # 构建请求体
+            request_body = {
+                "contents": [{
+                    "parts": [{
+                        "text": full_prompt
+                    }]
+                }],
+                "generationConfig": {
+                    "temperature": 0.7,
+                    "topP": 0.95,
+                    "topK": 40,
+                    "maxOutputTokens": 8192,
+                }
+            }
+            
+            # 设置请求头
+            headers = {
+                "Content-Type": "application/json"
+            }
+            
+            # 设置请求参数（API Key）
+            params = {
+                "key": self.api_key
             }
             
             try:
-                response = self.model.generate_content(
-                    full_prompt,
-                    generation_config=generation_config,
-                    request_options={'timeout': self.config.API_TIMEOUT}
+                # 发送请求
+                response = requests.post(
+                    api_url,
+                    json=request_body,
+                    headers=headers,
+                    params=params,
+                    timeout=self.config.API_TIMEOUT
                 )
+                
+                print(f"[Gemini] API 返回，状态码: {response.status_code}")
+                
+                # 检查响应状态
+                if response.status_code != 200:
+                    print(f"[Gemini] API 返回错误: {response.text}")
+                    raise Exception(f"API返回错误状态码 {response.status_code}: {response.text}")
+                
+                # 解析响应
+                response_data = response.json()
+                
+                # 提取生成的文本
+                if 'candidates' not in response_data or len(response_data['candidates']) == 0:
+                    print(f"[Gemini] API 响应中没有candidates: {response_data}")
+                    raise Exception("API响应格式错误：没有candidates")
+                
+                candidate = response_data['candidates'][0]
+                if 'content' not in candidate or 'parts' not in candidate['content']:
+                    print(f"[Gemini] API 响应格式错误: {candidate}")
+                    raise Exception("API响应格式错误：没有content或parts")
+                
+                text = candidate['content']['parts'][0]['text'].strip()
                 print(f"[Gemini] API 返回成功")
+                print(f"[Gemini] 响应文本长度: {len(text)} 字符")
+                print(f"[Gemini] 响应文本前200字符: {text[:200]}")
+                
+            except requests.exceptions.Timeout:
+                print(f"[Gemini] API 调用超时")
+                raise Exception(f"API调用超时（{self.config.API_TIMEOUT}秒）")
+            except requests.exceptions.RequestException as e:
+                print(f"[Gemini] 请求异常: {type(e).__name__}: {str(e)}")
+                raise
             except Exception as e:
                 print(f"[Gemini] API 调用异常: {type(e).__name__}: {str(e)}")
                 raise
-            
-            # 解析JSON响应
-            text = response.text.strip()
-            print(f"[Gemini] 响应文本长度: {len(text)} 字符")
-            print(f"[Gemini] 响应文本前200字符: {text[:200]}")
             
             # 移除可能的markdown代码块标记
             if text.startswith('```json'):
@@ -111,6 +155,8 @@ class GeminiService:
 
     def regenerate_outline_page(self, knowledge_text, user_prompt, page_number, existing_pages):
         """重新生成单页大纲"""
+        import requests
+        
         # 加载提示词模板
         prompt_template = self.load_prompt('outline_generation.txt')
 
@@ -141,8 +187,44 @@ class GeminiService:
 """
 
         def api_call():
-            response = self.model.generate_content(full_prompt)
-            text = response.text.strip()
+            # 构建API URL
+            api_url = f"{self.api_base_url}/v1beta/models/{self.model}:generateContent"
+            
+            # 构建请求体
+            request_body = {
+                "contents": [{
+                    "parts": [{
+                        "text": full_prompt
+                    }]
+                }],
+                "generationConfig": {
+                    "temperature": 0.7,
+                    "topP": 0.95,
+                    "topK": 40,
+                    "maxOutputTokens": 8192,
+                }
+            }
+            
+            # 设置请求头和参数
+            headers = {"Content-Type": "application/json"}
+            params = {"key": self.api_key}
+            
+            # 发送请求
+            response = requests.post(
+                api_url,
+                json=request_body,
+                headers=headers,
+                params=params,
+                timeout=self.config.API_TIMEOUT
+            )
+            
+            if response.status_code != 200:
+                raise Exception(f"API返回错误状态码 {response.status_code}: {response.text}")
+            
+            # 解析响应
+            response_data = response.json()
+            text = response_data['candidates'][0]['content']['parts'][0]['text'].strip()
+            
             # 移除可能的markdown代码块标记
             if text.startswith('```json'):
                 text = text[7:]
