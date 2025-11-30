@@ -36,11 +36,16 @@ function displayOutline(pages) {
             <div class="mb-sm">
                 <span class="text-muted">第 ${page.page_number} 页</span>
             </div>
-            <h3 class="card-title">${page.title}</h3>
-            <p class="card-content">${page.content}</p>
-            ${page.image_prompt ? `<p class="text-muted text-sm mt-sm">图片提示: ${page.image_prompt}</p>` : ''}
+            <h3 class="card-title">${escapeHtml(page.title)}</h3>
+            <p class="card-content">${escapeHtml(page.content)}</p>
+            ${page.image_prompt ? `<p class="text-muted text-sm mt-sm">图片提示: ${escapeHtml(page.image_prompt)}</p>` : ''}
             <div class="mt-md">
-                <button class="btn btn-sm" onclick="editOutlinePage(${page.page_number}, '${escapeHtml(page.title)}', '${escapeHtml(page.content)}', '${escapeHtml(page.image_prompt || '')}')">编辑</button>
+                <button class="btn btn-sm"
+                    data-page-number="${page.page_number}"
+                    data-title="${escapeHtml(page.title)}"
+                    data-content="${escapeHtml(page.content)}"
+                    data-image-prompt="${escapeHtml(page.image_prompt || '')}"
+                    onclick="editOutlinePageFromButton(this)">编辑</button>
                 <button class="btn btn-sm" onclick="regenerateOutlinePage(${page.page_number})">重新生成</button>
             </div>
         </div>
@@ -52,6 +57,13 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+}
+
+// 反转义HTML
+function unescapeHtml(text) {
+    const div = document.createElement('div');
+    div.innerHTML = text;
+    return div.textContent;
 }
 
 // 生成大纲
@@ -75,6 +87,15 @@ async function regenerateOutline() {
     const confirmed = await showConfirm('确定要重新生成整个大纲吗？', '重新生成大纲');
     if (!confirmed) return;
     await generateOutline();
+}
+
+// 从按钮元素读取数据并编辑大纲页
+function editOutlinePageFromButton(button) {
+    const pageNumber = button.dataset.pageNumber;
+    const title = unescapeHtml(button.dataset.title);
+    const content = unescapeHtml(button.dataset.content);
+    const imagePrompt = unescapeHtml(button.dataset.imagePrompt);
+    editOutlinePage(pageNumber, title, content, imagePrompt);
 }
 
 // 编辑大纲页
