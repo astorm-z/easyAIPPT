@@ -180,7 +180,7 @@ async function pollStyleProgress() {
                 await loadStyles(projectId); // 完成时正常加载
                 return;
             } else if (status.status === 'failed') {
-                showError(`样式模板生成失败: ${status.message}\n\n请点击"生成样式模板"按钮重新生成`);
+                showAlert(`样式模板生成失败: ${status.message}\n\n请点击"生成样式模板"按钮重新生成`, '生成失败');
                 hideStyleProgress();
                 // 清空样式网格，避免显示旧的样式
                 const grid = document.getElementById('styles-grid');
@@ -195,7 +195,7 @@ async function pollStyleProgress() {
             if (attempts < maxAttempts) {
                 setTimeout(poll, 1000); // 每秒轮询一次
             } else {
-                showError('样式生成超时，请刷新页面查看结果');
+                showAlert('样式生成超时，请刷新页面查看结果', '超时提示');
                 hideStyleProgress();
             }
         } catch (error) {
@@ -206,7 +206,7 @@ async function pollStyleProgress() {
                 setTimeout(poll, 1000);
             } else {
                 // 只有在达到最大重试次数后才提示
-                showError('轮询超时，请刷新页面查看结果');
+                showAlert('轮询超时，请刷新页面查看结果', '超时提示');
                 hideStyleProgress();
             }
         }
@@ -422,7 +422,7 @@ function listenProgress() {
         const data = JSON.parse(event.data);
 
         if (data.error) {
-            showError('生成过程出错: ' + data.error);
+            showAlert('生成过程出错: ' + data.error, '生成错误');
             eventSource.close();
             return;
         }

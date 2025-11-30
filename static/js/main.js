@@ -52,14 +52,14 @@ async function apiRequestSilent(url, options = {}) {
     return data.data;
 }
 
-// 显示错误消息
+// 显示错误消息（Toast版本）
 function showError(message) {
-    showAlert(message, '错误');
+    showErrorToast(message);
 }
 
-// 显示成功消息
+// 显示成功消息（Toast版本）
 function showSuccess(message) {
-    showAlert(message, '成功');
+    showSuccessToast(message);
 }
 
 // 格式化文件大小
