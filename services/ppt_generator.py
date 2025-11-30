@@ -18,6 +18,13 @@ class PPTGenerator:
         self.style_generation_status = {}  # 存储样式生成状态
         logger.info("PPTGenerator初始化完成")
 
+    def load_prompt(self, prompt_file):
+        """加载提示词文件"""
+        import os
+        prompt_path = os.path.join('prompts', prompt_file)
+        with open(prompt_path, 'r', encoding='utf-8') as f:
+            return f.read()
+
     def generate_style_templates(self, project_id, project, custom_prompt=''):
         """生成3个样式模板"""
         logger.info(f"开始为项目 {project_id} 生成样式模板, custom_prompt={custom_prompt}")
