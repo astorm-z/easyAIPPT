@@ -45,3 +45,6 @@ generated/
 # 操作系统
 .DS_Store
 Thumbs.db
+
+# Serena 工具缓存
+.serena/
