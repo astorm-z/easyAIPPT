@@ -35,7 +35,10 @@ def init_routes(db_manager: DBManager, banana_service: BananaService, ppt_genera
             if not workspace:
                 return jsonify({'success': False, 'error': '工作空间不存在'}), 404
 
-            data = request.get_json()
+            data = request.get_json(silent=True)
+            if not data:
+                return jsonify({'success': False, 'error': '请求数据为空'}), 400
+
             title = data.get('title', '').strip()
             user_prompt = data.get('user_prompt', '').strip()
             expected_pages = data.get('expected_pages', 10)
@@ -86,8 +89,8 @@ def init_routes(db_manager: DBManager, banana_service: BananaService, ppt_genera
                 logger.warning(f"项目不存在: project_id={project_id}")
                 return jsonify({'success': False, 'error': 'PPT项目不存在'}), 404
 
-            # 获取自定义提示词（可选）
-            data = request.get_json() or {}
+            # 获取自定义提示词（可选，使用 silent=True 避免空请求体时抛出异常）
+            data = request.get_json(silent=True) or {}
             custom_prompt = data.get('custom_prompt', '').strip()
 
             # 在新线程中异步生成样式模板
@@ -137,7 +140,10 @@ def init_routes(db_manager: DBManager, banana_service: BananaService, ppt_genera
     def select_style(project_id):
         """选择样式模板"""
         try:
-            data = request.get_json()
+            data = request.get_json(silent=True)
+            if not data:
+                return jsonify({'success': False, 'error': '请求数据为空'}), 400
+
             style_index = data.get('style_index')
 
             if style_index is None or style_index not in [0, 1, 2]:
@@ -205,8 +211,8 @@ def init_routes(db_manager: DBManager, banana_service: BananaService, ppt_genera
             if not project:
                 return jsonify({'success': False, 'error': 'PPT项目不存在'}), 404
 
-            # 获取请求数据
-            data = request.get_json() or {}
+            # 获取请求数据（使用 silent=True 避免空请求体时抛出异常）
+            data = request.get_json(silent=True) or {}
             custom_prompts = data.get('custom_prompts')  # 自定义提示词列表（可选）
 
             # 检查是否需要恢复
@@ -262,8 +268,8 @@ def init_routes(db_manager: DBManager, banana_service: BananaService, ppt_genera
             if not project:
                 return jsonify({'success': False, 'error': 'PPT项目不存在'}), 404
 
-            # 获取自定义提示词（可选）
-            data = request.get_json() or {}
+            # 获取自定义提示词（可选，使用 silent=True 避免空请求体时抛出异常）
+            data = request.get_json(silent=True) or {}
             custom_prompt = data.get('custom_prompt', '').strip()
 
             result = ppt_generator.regenerate_single_page(project_id, page_number, custom_prompt=custom_prompt)

@@ -26,7 +26,10 @@ def init_routes(db_manager: DBManager):
     def create_workspace():
         """创建新工作空间"""
         try:
-            data = request.get_json()
+            data = request.get_json(silent=True)
+            if not data:
+                return jsonify({'success': False, 'error': '请求数据为空'}), 400
+
             name = data.get('name', '').strip()
             description = data.get('description', '').strip()
 
@@ -54,7 +57,10 @@ def init_routes(db_manager: DBManager):
     def update_workspace(workspace_id):
         """更新工作空间"""
         try:
-            data = request.get_json()
+            data = request.get_json(silent=True)
+            if not data:
+                return jsonify({'success': False, 'error': '请求数据为空'}), 400
+
             name = data.get('name', '').strip()
             description = data.get('description', '').strip()
 

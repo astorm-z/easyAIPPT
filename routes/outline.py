@@ -19,8 +19,8 @@ def init_routes(db_manager: DBManager, gemini_service: GeminiService):
                 print(f"[大纲生成] 项目 {project_id} 不存在")
                 return jsonify({'success': False, 'error': 'PPT项目不存在'}), 404
 
-            # 获取请求数据
-            data = request.get_json() or {}
+            # 获取请求数据（使用 silent=True 避免空请求体时抛出异常）
+            data = request.get_json(silent=True) or {}
             custom_prompt = data.get('custom_prompt')  # 自定义提示词（可选）
 
             print(f"[大纲生成] 获取知识库文本，工作区ID: {project['workspace_id']}")
@@ -106,7 +106,10 @@ def init_routes(db_manager: DBManager, gemini_service: GeminiService):
     def update_outline_page(project_id, page_number):
         """更新单页大纲"""
         try:
-            data = request.get_json()
+            data = request.get_json(silent=True)
+            if not data:
+                return jsonify({'success': False, 'error': '请求数据为空'}), 400
+
             title = data.get('title', '').strip()
             content = data.get('content', '').strip()
             image_prompt = data.get('image_prompt', '').strip()
@@ -127,8 +130,8 @@ def init_routes(db_manager: DBManager, gemini_service: GeminiService):
             if not project:
                 return jsonify({'success': False, 'error': 'PPT项目不存在'}), 404
 
-            # 获取请求数据
-            data = request.get_json() or {}
+            # 获取请求数据（使用 silent=True 避免空请求体时抛出异常）
+            data = request.get_json(silent=True) or {}
             extra_prompt = data.get('extra_prompt', '').strip()  # 额外提示词
 
             # 获取知识库文本
