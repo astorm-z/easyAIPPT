@@ -21,6 +21,7 @@ class Config:
     # Banana (图片生成) API配置
     # 图片生成也使用Gemini API（gemini-3-pro-image-preview模型）
     BANANA_API_BASE_URL = os.getenv('BANANA_API_BASE_URL', 'https://generativelanguage.googleapis.com')
+    BANANA_MODEL = os.getenv('BANANA_MODEL', 'gemini-3-pro-image-preview')
 
     # 数据库配置
     DATABASE_PATH = os.getenv('DATABASE_PATH', './database/easyaippt.db')

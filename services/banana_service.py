@@ -26,8 +26,8 @@ class BananaService:
 
         self.client = genai.Client(**client_kwargs)
 
-        # 使用Gemini 3 Pro Image Preview模型（Nano Banana Pro）
-        self.model_name = 'gemini-3-pro-image-preview'
+        # 使用配置的图片生成模型
+        self.model_name = config.BANANA_MODEL
         logger.info(f"BananaService初始化完成 - 使用模型: {self.model_name}")
 
     def load_prompt(self, prompt_file):
