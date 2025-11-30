@@ -62,12 +62,34 @@ class GeminiService:
         print(f"[Gemini] 提示词长度: {len(full_prompt)} 字符")
 
         def api_call():
-            print(f"[Gemini] 调用 Gemini API...")
-            response = self.model.generate_content(full_prompt)
-            print(f"[Gemini] API 返回成功")
+            print(f"[Gemini] 调用 Gemini API，超时时间: {self.config.API_TIMEOUT}秒")
+            import sys
+            sys.stdout.flush()  # 强制刷新输出
+            
+            # 设置生成配置
+            generation_config = {
+                'temperature': 0.7,
+                'top_p': 0.95,
+                'top_k': 40,
+                'max_output_tokens': 8192,
+            }
+            
+            try:
+                response = self.model.generate_content(
+                    full_prompt,
+                    generation_config=generation_config,
+                    request_options={'timeout': self.config.API_TIMEOUT}
+                )
+                print(f"[Gemini] API 返回成功")
+            except Exception as e:
+                print(f"[Gemini] API 调用异常: {type(e).__name__}: {str(e)}")
+                raise
+            
             # 解析JSON响应
             text = response.text.strip()
             print(f"[Gemini] 响应文本长度: {len(text)} 字符")
+            print(f"[Gemini] 响应文本前200字符: {text[:200]}")
+            
             # 移除可能的markdown代码块标记
             if text.startswith('```json'):
                 text = text[7:]
@@ -75,9 +97,15 @@ class GeminiService:
                 text = text[3:]
             if text.endswith('```'):
                 text = text[:-3]
-            result = json.loads(text.strip())
-            print(f"[Gemini] JSON 解析成功")
-            return result
+            
+            try:
+                result = json.loads(text.strip())
+                print(f"[Gemini] JSON 解析成功")
+                return result
+            except json.JSONDecodeError as e:
+                print(f"[Gemini] JSON 解析失败: {str(e)}")
+                print(f"[Gemini] 尝试解析的文本: {text[:500]}")
+                raise
 
         return self.retry_api_call(api_call)
 

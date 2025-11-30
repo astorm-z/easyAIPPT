@@ -41,6 +41,7 @@ class Config:
     # API重试配置
     MAX_API_RETRIES = 10
     RETRY_DELAY_BASE = 2  # 指数退避的基数（秒）
+    API_TIMEOUT = 60  # API调用超时时间（秒）
 
     @staticmethod
     def init_app(app):
