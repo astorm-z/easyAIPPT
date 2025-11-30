@@ -409,6 +409,112 @@ textarea {
     display: none;
 }
 
+/* ==================== 自定义弹窗 ==================== */
+.dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(26, 26, 26, 0.4);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-base);
+}
+
+.dialog-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.dialog {
+    max-width: 480px;
+    width: 90%;
+    background-color: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    padding: 0;
+    transform: scale(0.95);
+    transition: transform var(--transition-base);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+}
+
+.dialog-overlay.active .dialog {
+    transform: scale(1);
+}
+
+.dialog-header {
+    padding: var(--spacing-lg);
+    border-bottom: 1px solid var(--color-gray-100);
+}
+
+.dialog-title {
+    font-size: var(--font-size-lg);
+    font-weight: 400;
+    color: var(--color-black);
+    margin: 0;
+}
+
+.dialog-body {
+    padding: var(--spacing-lg);
+    color: var(--color-gray-800);
+    line-height: 1.6;
+}
+
+.dialog-input {
+    width: 100%;
+    padding: var(--spacing-sm);
+    border: 1px solid var(--color-gray-200);
+    background-color: var(--color-white);
+    font-family: var(--font-sans);
+    font-size: var(--font-size-base);
+    color: var(--color-black);
+    transition: border-color var(--transition-base);
+    margin-top: var(--spacing-sm);
+}
+
+.dialog-input:focus {
+    outline: none;
+    border-color: var(--color-black);
+}
+
+.dialog-footer {
+    padding: var(--spacing-lg);
+    border-top: 1px solid var(--color-gray-100);
+    display: flex;
+    gap: var(--spacing-sm);
+    justify-content: flex-end;
+}
+
+.dialog-btn {
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border: 1px solid var(--color-gray-200);
+    background-color: var(--color-white);
+    color: var(--color-black);
+    font-family: var(--font-sans);
+    font-size: var(--font-size-base);
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.dialog-btn:hover {
+    background-color: var(--color-gray-50);
+}
+
+.dialog-btn-primary {
+    background-color: var(--color-black);
+    color: var(--color-white);
+    border-color: var(--color-black);
+}
+
+.dialog-btn-primary:hover {
+    background-color: var(--color-gray-800);
+}
+
 /* ==================== 响应式 ==================== */
 @media (max-width: 768px) {
     :root {
@@ -419,5 +525,9 @@ textarea {
     .container,
     .container-narrow {
         padding: var(--spacing-lg) var(--spacing-md);
+    }
+
+    .dialog {
+        max-width: 95%;
     }
 }

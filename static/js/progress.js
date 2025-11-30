@@ -53,7 +53,7 @@ function convertPathToUrl(filePath) {
 // 生成样式模板
 async function generateStyles() {
     // 弹出对话框让用户输入自定义提示词
-    const customPrompt = prompt('可选：输入自定义提示词来影响样式生成（留空则使用默认样式）');
+    const customPrompt = await showPrompt('可选：输入自定义提示词来影响样式生成（留空则使用默认样式）', '', '自定义样式提示词');
 
     // 用户点击取消则不继续
     if (customPrompt === null) return;
@@ -251,7 +251,8 @@ function getPageStatusText(status) {
 
 // 开始生成PPT
 async function startGeneration() {
-    if (!confirm('开始生成PPT页面，这可能需要较长时间，确定吗？')) return;
+    const confirmed = await showConfirm('开始生成PPT页面，这可能需要较长时间，确定吗？', '开始生成');
+    if (!confirmed) return;
 
     try {
         // 启动生成任务
@@ -314,7 +315,7 @@ function listenProgress() {
 // 重新生成单页
 async function regeneratePage(pageNumber) {
     // 弹出对话框让用户输入自定义提示词
-    const customPrompt = prompt(`可选：输入自定义提示词来影响第 ${pageNumber} 页的生成（留空则使用默认提示词）`);
+    const customPrompt = await showPrompt(`可选：输入自定义提示词来影响第 ${pageNumber} 页的生成（留空则使用默认提示词）`, '', `自定义第 ${pageNumber} 页提示词`);
 
     // 用户点击取消则不继续
     if (customPrompt === null) return;
@@ -334,7 +335,8 @@ async function regeneratePage(pageNumber) {
 
 // 恢复生成
 async function resumeGeneration() {
-    if (!confirm('继续生成未完成的PPT页面？')) return;
+    const confirmed = await showConfirm('继续生成未完成的PPT页面？', '继续生成');
+    if (!confirmed) return;
 
     try {
         await apiRequest(`/api/ppt/${projectId}/pages/resume`, {

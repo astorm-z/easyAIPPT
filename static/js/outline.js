@@ -72,7 +72,8 @@ async function generateOutline() {
 
 // 重新生成大纲
 async function regenerateOutline() {
-    if (!confirm('确定要重新生成整个大纲吗？')) return;
+    const confirmed = await showConfirm('确定要重新生成整个大纲吗？', '重新生成大纲');
+    if (!confirmed) return;
     await generateOutline();
 }
 
@@ -117,7 +118,8 @@ async function saveOutlinePage(event) {
 
 // 重新生成单页大纲
 async function regenerateOutlinePage(pageNumber) {
-    if (!confirm(`确定要重新生成第 ${pageNumber} 页吗？`)) return;
+    const confirmed = await showConfirm(`确定要重新生成第 ${pageNumber} 页吗？`, '重新生成');
+    if (!confirmed) return;
 
     try {
         await apiRequest(`/api/ppt/${projectId}/outline/${pageNumber}/regenerate`, {
@@ -132,7 +134,8 @@ async function regenerateOutlinePage(pageNumber) {
 
 // 确认大纲
 async function confirmOutline() {
-    if (!confirm('确认大纲后将进入样式选择和PPT生成阶段，确定吗？')) return;
+    const confirmed = await showConfirm('确认大纲后将进入样式选择和PPT生成阶段，确定吗？', '确认大纲');
+    if (!confirmed) return;
 
     try {
         // 更新项目状态

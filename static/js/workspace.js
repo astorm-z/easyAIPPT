@@ -190,7 +190,8 @@ function downloadKnowledgeFile(fileId, filename) {
 
 // 删除知识库文件
 async function deleteKnowledgeFile(fileId) {
-    if (!confirm('确定要删除这个文件吗？')) return;
+    const confirmed = await showConfirm('确定要删除这个文件吗？', '删除文件');
+    if (!confirmed) return;
 
     try {
         await apiRequest(`/api/knowledge/${fileId}`, { method: 'DELETE' });

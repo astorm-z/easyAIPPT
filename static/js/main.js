@@ -27,12 +27,12 @@ async function apiRequest(url, options = {}) {
 
 // 显示错误消息
 function showError(message) {
-    alert('错误: ' + message);
+    showAlert(message, '错误');
 }
 
 // 显示成功消息
 function showSuccess(message) {
-    alert(message);
+    showAlert(message, '成功');
 }
 
 // 格式化文件大小
