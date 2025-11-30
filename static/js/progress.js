@@ -11,12 +11,16 @@ async function loadProjectInfo(projectId) {
 }
 
 // 加载样式模板
-async function loadStyles(projectId) {
+async function loadStyles(projectId, silent = false) {
     try {
-        const styles = await apiRequest(`/api/ppt/${projectId}/styles`);
+        // 如果是静默模式（轮询调用），使用静默版本的API请求
+        const styles = silent
+            ? await apiRequestSilent(`/api/ppt/${projectId}/styles`)
+            : await apiRequest(`/api/ppt/${projectId}/styles`);
         displayStyles(styles);
     } catch (error) {
         console.error('加载样式模板失败:', error);
+        // 静默模式下不需要额外处理，因为 apiRequest 已经会显示错误
     }
 }
 
@@ -136,7 +140,8 @@ async function pollStyleProgress() {
 
     const poll = async () => {
         try {
-            const status = await apiRequest(`/api/ppt/${projectId}/styles/status`);
+            // 使用静默版本的API请求，避免网络波动时弹窗提示
+            const status = await apiRequestSilent(`/api/ppt/${projectId}/styles/status`);
 
             // 更新进度条
             const progress = (status.current / status.total) * 100;
@@ -152,7 +157,7 @@ async function pollStyleProgress() {
 
             // 实时加载已生成的样式（当有新样式生成时）
             if (status.current > lastLoadedCount && status.status === 'generating') {
-                await loadStyles(projectId);
+                await loadStyles(projectId, true); // 静默模式
                 lastLoadedCount = status.current;
             }
 
@@ -160,7 +165,7 @@ async function pollStyleProgress() {
             if (status.status === 'completed') {
                 showSuccess('样式模板生成完成！');
                 hideStyleProgress();
-                await loadStyles(projectId);
+                await loadStyles(projectId); // 完成时正常加载
                 return;
             } else if (status.status === 'failed') {
                 showError(`样式模板生成失败: ${status.message}\n\n请点击"生成样式模板"按钮重新生成`);
@@ -182,10 +187,15 @@ async function pollStyleProgress() {
                 hideStyleProgress();
             }
         } catch (error) {
-            console.error('轮询进度失败:', error);
+            // 静默处理错误，只在控制台记录，继续轮询
+            console.warn('轮询进度失败（静默处理）:', error);
             attempts++;
             if (attempts < maxAttempts) {
                 setTimeout(poll, 1000);
+            } else {
+                // 只有在达到最大重试次数后才提示
+                showError('轮询超时，请刷新页面查看结果');
+                hideStyleProgress();
             }
         }
     };
@@ -209,9 +219,12 @@ async function selectStyle(styleIndex) {
 }
 
 // 加载PPT页面
-async function loadPages(projectId) {
+async function loadPages(projectId, silent = false) {
     try {
-        const pages = await apiRequest(`/api/ppt/${projectId}/pages`);
+        // 如果是静默模式（SSE推送调用），使用静默版本的API请求
+        const pages = silent
+            ? await apiRequestSilent(`/api/ppt/${projectId}/pages`)
+            : await apiRequest(`/api/ppt/${projectId}/pages`);
         displayPages(pages);
 
         // 检查是否有未完成的页面
@@ -399,8 +412,8 @@ function listenProgress() {
         document.getElementById('progress-text').textContent =
             `正在生成第 ${data.current_page} / ${data.total_pages} 页`;
 
-        // 刷新页面显示
-        loadPages(projectId);
+        // 刷新页面显示（静默模式，避免网络波动时弹窗）
+        loadPages(projectId, true);
 
         // 如果完成或失败，关闭连接
         if (data.status === 'completed' || data.status === 'failed') {

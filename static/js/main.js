@@ -25,6 +25,25 @@ async function apiRequest(url, options = {}) {
     }
 }
 
+// API请求封装（静默版本，用于轮询等场景，不显示错误弹窗）
+async function apiRequestSilent(url, options = {}) {
+    const response = await fetch(url, {
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        },
+        ...options
+    });
+
+    const data = await response.json();
+
+    if (!data.success) {
+        throw new Error(data.error || '请求失败');
+    }
+
+    return data.data;
+}
+
 // 显示错误消息
 function showError(message) {
     showAlert(message, '错误');
