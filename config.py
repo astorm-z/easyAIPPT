@@ -14,7 +14,7 @@ class Config:
     DEBUG = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
 
     # 登录认证配置
-    LOGIN_PASSWORD = os.getenv('LOGIN_PASSWORD', 'admin123')  # 默认密码，生产环境务必修改
+    LOGIN_PASSWORD = os.getenv('LOGIN_PASSWORD', '')  # 默认为空，不需要登录
 
     # Gemini API配置
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')

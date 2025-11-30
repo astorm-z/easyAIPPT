@@ -7,10 +7,10 @@
 - **登录认证**：支持密码保护，可选功能，session 有效期 7 天
 - **工作空间管理**：创建多个独立的工作空间，支持删除，互不干扰
 - **知识库构建**：支持上传txt、pdf、doc、docx文档和常见图片格式
-- **智能大纲生成**：基于Gemini 1.5 Pro模型，根据知识库和用户需求自动生成PPT大纲
+- **智能大纲生成**：基于Gemini模型，根据知识库和用户需求自动生成PPT大纲
 - **大纲编辑**：支持手动编辑、单页重新生成或全部重新生成
 - **样式模板选择**：自动生成3种PPT样式模板供用户选择
-- **逐页生成PPT**：使用Gemini 3 Pro Image Preview模型（Nano Banana Pro）逐页生成PPT图片
+- **逐页生成PPT**：使用Gemini图片生成模型逐页生成PPT图片
 - **样式一致性**：生成时传入样式模板图片作为参考，确保风格统一
 - **实时进度显示**：生成过程中实时显示进度条和状态信息
 - **任务持久化**：服务器重启后自动恢复未完成的生成任务
@@ -26,8 +26,8 @@
 - **数据库**：SQLite
 - **文件存储**：本地文件系统
 - **AI模型**：
-  - Gemini 1.5 Pro（大纲生成）
-  - Gemini 3 Pro Image Preview / Nano Banana Pro（图片生成，支持2K/4K分辨率）
+  - Gemini 1.5 Pro（默认，可修改，用于大纲生成）
+  - Gemini 3 Pro Image Preview（默认，可修改，用于 PPT 图片生成，支持2K/4K分辨率）
 
 ## 项目结构
 
@@ -178,7 +178,7 @@ BANANA_API_KEY=your_image_api_key
 BANANA_API_BASE_URL=https://image-proxy.com
 
 # 场景3：使用不同的模型
-GEMINI_MODEL=gemini-1.5-flash
+GEMINI_MODEL=gemini-1.5-pro
 BANANA_MODEL=gemini-3-pro-image-preview
 
 # 场景4：自定义图片分辨率（样式模板使用2K，PPT页面使用4K）
@@ -262,8 +262,8 @@ python app.py
 
 项目使用Google Gemini API进行AI功能：
 
-- **大纲生成**：使用 `gemini-1.5-pro` 模型
-- **图片生成**：使用 `gemini-3-pro-image-preview` 模型（Nano Banana Pro）
+- **大纲生成**：使用 `gemini-1.5-pro` 模型（默认）
+- **图片生成**：使用 `gemini-3-pro-image-preview` 模型（默认）
   - 支持自定义宽高比（默认16:9，适合PPT）
   - 支持2K/4K高分辨率（样式模板默认2K，PPT页面默认4K）
   - 自动添加SynthID水印
@@ -337,8 +337,8 @@ python app.py
 
 **核心功能**
 - ✅ 完整的工作空间和知识库管理
-- ✅ 基于Gemini 1.5 Pro的智能大纲生成
-- ✅ 基于Gemini 3 Pro Image Preview的图片生成
+- ✅ 基于Gemini的智能大纲生成
+- ✅ 基于Gemini的图片生成
 - ✅ 样式模板选择和风格一致性保证
 - ✅ 登录认证功能（可选，支持密码保护）
 - ✅ 工作空间删除功能
