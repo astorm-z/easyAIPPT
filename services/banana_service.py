@@ -115,32 +115,29 @@ class BananaService:
                     logger.error(f"API 返回错误: {response.text}")
                     raise Exception(f"API返回错误状态码 {response.status_code}: {response.text}")
                 
-                # 解析响应（流式响应）
-                response_text = response.text
-                logger.debug(f"响应内容: {response_text[:500]}...")
-                
-                # 解析流式响应中的图片数据
+                # 解析响应
+                response_data = response.json()
+                logger.debug(f"响应数据类型: {type(response_data)}")
+
+                # 响应可能是数组或对象
+                if isinstance(response_data, list):
+                    response_data = response_data[0] if response_data else {}
+
+                # 提取图片数据
                 image_data = None
-                for line in response_text.strip().split('\n'):
-                    if line.startswith('data: '):
-                        try:
-                            data = json.loads(line[6:])  # 去掉 "data: " 前缀
-                            if 'candidates' in data:
-                                for candidate in data['candidates']:
-                                    if 'content' in candidate and 'parts' in candidate['content']:
-                                        for part in candidate['content']['parts']:
-                                            if 'inlineData' in part:
-                                                image_data = part['inlineData']['data']
-                                                logger.info("从响应中提取图片数据")
-                                                break
-                                    if image_data:
-                                        break
-                            if image_data:
-                                break
-                        except json.JSONDecodeError:
-                            continue
-                
+                if 'candidates' in response_data:
+                    for candidate in response_data['candidates']:
+                        if 'content' in candidate and 'parts' in candidate['content']:
+                            for part in candidate['content']['parts']:
+                                if 'inlineData' in part:
+                                    image_data = part['inlineData']['data']
+                                    logger.info("从响应中提取图片数据")
+                                    break
+                        if image_data:
+                            break
+
                 if not image_data:
+                    logger.error(f"响应结构: {json.dumps(response_data, ensure_ascii=False)[:1000]}")
                     raise Exception("Gemini未返回图片数据")
                 
                 # 解码base64图片数据
@@ -326,32 +323,29 @@ class BananaService:
                     logger.error(f"API 返回错误: {response.text}")
                     raise Exception(f"API返回错误状态码 {response.status_code}: {response.text}")
                 
-                # 解析响应（流式响应）
-                response_text = response.text
-                logger.debug(f"响应内容: {response_text[:500]}...")
-                
-                # 解析流式响应中的图片数据
+                # 解析响应
+                response_data = response.json()
+                logger.debug(f"响应数据类型: {type(response_data)}")
+
+                # 响应可能是数组或对象
+                if isinstance(response_data, list):
+                    response_data = response_data[0] if response_data else {}
+
+                # 提取图片数据
                 image_data = None
-                for line in response_text.strip().split('\n'):
-                    if line.startswith('data: '):
-                        try:
-                            data = json.loads(line[6:])  # 去掉 "data: " 前缀
-                            if 'candidates' in data:
-                                for candidate in data['candidates']:
-                                    if 'content' in candidate and 'parts' in candidate['content']:
-                                        for part in candidate['content']['parts']:
-                                            if 'inlineData' in part:
-                                                image_data = part['inlineData']['data']
-                                                logger.info("从响应中提取图片数据")
-                                                break
-                                    if image_data:
-                                        break
-                            if image_data:
-                                break
-                        except json.JSONDecodeError:
-                            continue
-                
+                if 'candidates' in response_data:
+                    for candidate in response_data['candidates']:
+                        if 'content' in candidate and 'parts' in candidate['content']:
+                            for part in candidate['content']['parts']:
+                                if 'inlineData' in part:
+                                    image_data = part['inlineData']['data']
+                                    logger.info("从响应中提取图片数据")
+                                    break
+                        if image_data:
+                            break
+
                 if not image_data:
+                    logger.error(f"响应结构: {json.dumps(response_data, ensure_ascii=False)[:1000]}")
                     raise Exception("Gemini未返回图片数据")
                 
                 # 解码base64图片数据
