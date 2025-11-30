@@ -1,5 +1,6 @@
 """Flask主应用入口"""
 import logging
+from datetime import timedelta
 from flask import Flask
 from config import Config
 from database.models import Database
@@ -10,6 +11,7 @@ from services.banana_service import BananaService
 from services.ppt_generator import PPTGenerator
 
 # 导入路由
+from routes.auth import init_routes as init_auth_routes
 from routes.workspace import init_routes as init_workspace_routes
 from routes.knowledge import init_routes as init_knowledge_routes
 from routes.outline import init_routes as init_outline_routes
@@ -28,6 +30,9 @@ def create_app():
     """创建Flask应用"""
     app = Flask(__name__)
     app.config.from_object(Config)
+
+    # 配置session
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)  # session有效期7天
 
     logger.info("正在初始化Flask应用...")
 
@@ -62,6 +67,10 @@ def create_app():
         logger.error(f"恢复生成任务失败: {str(e)}")
 
     # 注册路由蓝图
+    # 先注册认证路由
+    auth_bp = init_auth_routes(Config)
+    app.register_blueprint(auth_bp)
+
     workspace_bp = init_workspace_routes(db_manager)
     app.register_blueprint(workspace_bp)
 
@@ -74,6 +83,30 @@ def create_app():
     ppt_bp_instance = init_ppt_routes(db_manager, banana_service, ppt_generator)
     app.register_blueprint(ppt_bp_instance)
     logger.info("路由注册完成")
+
+    # 添加登录验证中间件
+    from flask import session, redirect, url_for, request
+
+    @app.before_request
+    def check_login():
+        """在每个请求前检查登录状态"""
+        # 如果未设置密码，则不需要登录
+        if not Config.LOGIN_PASSWORD:
+            return None
+
+        # 排除不需要登录的路径
+        excluded_paths = ['/login', '/api/auth/login', '/static/', '/logout']
+        if any(request.path.startswith(path) for path in excluded_paths):
+            return None
+
+        # 检查是否已登录
+        if not session.get('logged_in'):
+            # API请求返回401
+            if request.path.startswith('/api/'):
+                from flask import jsonify
+                return jsonify({'success': False, 'error': '未登录'}), 401
+            # 页面请求重定向到登录页
+            return redirect(url_for('auth.login', next=request.url))
 
     # 设置最大上传文件大小
     app.config['MAX_CONTENT_LENGTH'] = Config.MAX_UPLOAD_SIZE

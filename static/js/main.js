@@ -11,6 +11,12 @@ async function apiRequest(url, options = {}) {
             ...options
         });
 
+        // 如果返回401未登录，跳转到登录页
+        if (response.status === 401) {
+            window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+            throw new Error('未登录');
+        }
+
         const data = await response.json();
 
         if (!data.success) {
@@ -20,7 +26,9 @@ async function apiRequest(url, options = {}) {
         return data.data;
     } catch (error) {
         console.error('API请求错误:', error);
-        showError(error.message);
+        if (error.message !== '未登录') {
+            showError(error.message);
+        }
         throw error;
     }
 }
@@ -106,3 +114,13 @@ document.addEventListener('click', (e) => {
         e.target.classList.remove('active');
     }
 });
+
+// 登出功能
+async function handleLogout() {
+    try {
+        await apiRequest('/api/auth/logout', { method: 'POST' });
+        window.location.href = '/login';
+    } catch (error) {
+        console.error('登出失败:', error);
+    }
+}

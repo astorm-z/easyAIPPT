@@ -13,6 +13,9 @@ class Config:
     SECRET_KEY = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key-change-in-production')
     DEBUG = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
 
+    # 登录认证配置
+    LOGIN_PASSWORD = os.getenv('LOGIN_PASSWORD', 'admin123')  # 默认密码，生产环境务必修改
+
     # Gemini API配置
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
     GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-1.5-pro')
