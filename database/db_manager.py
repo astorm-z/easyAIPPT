@@ -192,6 +192,15 @@ class DBManager:
         '''
         self.db.execute_update(query, (image_path, status, error_message, project_id, page_number))
 
+    def update_ppt_page_status(self, project_id: int, page_number: int, status: str) -> None:
+        """更新PPT页面状态"""
+        query = '''
+            UPDATE ppt_pages
+            SET status = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE ppt_project_id = ? AND page_number = ?
+        '''
+        self.db.execute_update(query, (status, project_id, page_number))
+
     def increment_page_retry_count(self, project_id: int, page_number: int) -> None:
         """增加页面重试次数"""
         query = '''
