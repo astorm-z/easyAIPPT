@@ -185,11 +185,17 @@ textarea {
     border: 1px solid var(--color-gray-100);
     padding: var(--spacing-lg);
     margin-bottom: var(--spacing-lg);
-    transition: border-color var(--transition-base);
+    transition: all var(--transition-base);
 }
 
 .card:hover {
     border-color: var(--color-gray-300);
+}
+
+.card-selected {
+    border: 2px solid var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background-color: rgba(59, 130, 246, 0.02);
 }
 
 .card-title {

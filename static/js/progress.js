@@ -1,9 +1,13 @@
 // PPT生成和进度管理
 
 // 加载项目信息
+// 全局变量存储项目信息
+let currentProject = null;
+
 async function loadProjectInfo(projectId) {
     try {
         const project = await apiRequest(`/api/ppt/${projectId}`);
+        currentProject = project;
         document.getElementById('ppt-title').textContent = project.title;
     } catch (error) {
         console.error('加载项目信息失败:', error);
@@ -34,18 +38,26 @@ function displayStyles(styles) {
         return;
     }
 
+    // 获取当前选中的样式索引
+    const selectedIndex = currentProject?.selected_style_index;
+
     grid.innerHTML = styles.map(style => {
         // 转换文件路径为URL路径
         const imageUrl = convertPathToUrl(style.image_path);
+        const isSelected = selectedIndex === style.template_index;
+
         return `
-            <div class="card">
+            <div class="card ${isSelected ? 'card-selected' : ''}" data-style-index="${style.template_index}">
                 <img src="${imageUrl}"
                      alt="样式 ${style.template_index + 1}"
                      style="width: 100%; height: auto; cursor: pointer;"
                      onclick="viewStyleImage('${imageUrl}', ${style.template_index})"
                      title="点击查看大图">
                 <div class="mt-sm text-center">
-                    <button class="btn btn-sm" onclick="selectStyle(${style.template_index})">选择此样式</button>
+                    <button class="btn btn-sm ${isSelected ? 'btn-primary' : ''}"
+                            onclick="selectStyle(${style.template_index})">
+                        ${isSelected ? '✓ 已选择' : '选择此样式'}
+                    </button>
                 </div>
             </div>
         `;
@@ -211,6 +223,15 @@ async function selectStyle(styleIndex) {
             body: JSON.stringify({ style_index: styleIndex })
         });
         showSuccess('样式已选择');
+
+        // 更新当前项目的选中样式索引
+        if (currentProject) {
+            currentProject.selected_style_index = styleIndex;
+        }
+
+        // 重新加载样式以更新UI
+        await loadStyles(projectId, true);
+
         // 启用生成按钮
         document.getElementById('generate-btn').disabled = false;
     } catch (error) {
